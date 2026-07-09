@@ -1,23 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
-using BattleAngel.Grid;
 using BattleAngel.Rendering;
+using BattleAngel.Grid;
 
 namespace BattleAngel.Rooms
 {
-    /// <summary>
-    /// Builds a mission map by placing prefab RoomDefinitions and snapping them together
-    /// through matching connector sockets (a North-facing connector mates with a
-    /// South-facing one, etc). Grows outward from a start room, breadth-first, until the
-    /// target room count is hit, then forces the objective room onto the last open socket.
-    ///
-    /// This is deliberately not noise-based generation — Quasimorph-style room-prefab
-    /// assembly gives far more control over pacing, chokepoints, and guaranteeing the
-    /// objective is reachable, which matters a lot for a game built around cover combat.
-    ///
-    /// Writes results directly into GridManager (logical data) and InstancedPropRenderer
-    /// (visual props). Call TilemapVisualSync.PaintAll() afterward to render the floor/walls.
-    /// </summary>
+
     public class LevelAssembler : MonoBehaviour
     {
         [SerializeField] private GridManager gridManager;
@@ -37,8 +25,8 @@ namespace BattleAngel.Rooms
         private struct PlacedRoom
         {
             public RoomDefinition def;
-            public Vector2Int origin; // bottom-left cell in world grid space
-            public int rotationSteps; // 0-3, 90 degree increments
+            public Vector2Int origin;
+            public int rotationSteps;
         }
 
         private struct PlacedConnector
@@ -58,7 +46,7 @@ namespace BattleAngel.Rooms
 
             int attempts = 0;
             while (placedRooms.Count < targetRoomCount && openConnectors.Count > 0
-                   && attempts < maxPlacementAttempts)
+                    && attempts < maxPlacementAttempts)
             {
                 attempts++;
 
@@ -75,15 +63,13 @@ namespace BattleAngel.Rooms
             }
 
             PaintAllRooms();
+            WallAutotiler.Autotile(gridManager);
         }
 
         private bool TryAttachRoom(RoomDefinition def, PlacedConnector socket)
         {
             var requiredDir = Opposite(socket.worldDirection);
 
-            // try every rotation of the candidate room and every connector on it,
-            // looking for one that faces the socket correctly and doesn't overlap
-            // anything already placed.
             for (int rot = 0; rot < 4; rot++)
             {
                 foreach (var conn in def.connectors)
@@ -137,7 +123,6 @@ namespace BattleAngel.Rooms
                     var p = room.origin + RotatePoint(tile.localPosition, room.def.size, room.rotationSteps);
                     ref var cell = ref gridManager.CellAt(p.x, p.y);
                     cell.floorTileId = tile.floorTileId;
-                    cell.wallTileId = tile.wallTileId;
                     cell.flags = tile.flags;
                 }
 
@@ -150,8 +135,6 @@ namespace BattleAngel.Rooms
                 }
             }
         }
-
-        // --- rotation helpers -------------------------------------------------
 
         private static Vector2Int RotatePoint(Vector2Int p, Vector2Int size, int rotSteps)
         {
@@ -167,7 +150,6 @@ namespace BattleAngel.Rooms
 
         private static ConnectorDirection RotateDirection(ConnectorDirection dir, int rotSteps)
         {
-            // cycle N -> E -> S -> W per 90-degree step
             int d = (int)dir;
             for (int i = 0; i < rotSteps; i++) d = (d + 1) % 4;
             return (ConnectorDirection)d;
@@ -175,7 +157,6 @@ namespace BattleAngel.Rooms
 
         private static ConnectorDirection Opposite(ConnectorDirection dir)
         {
-            // N<->S and E<->W are two rotation steps apart in the N,E,S,W ordering.
             return RotateDirection(dir, 2);
         }
 
