@@ -97,7 +97,7 @@ namespace RoomGen
                 var worldRun = new WorldConnectorRun
                 {
                     ownerRoomId = room.id,
-                    localEdge = localRun.edge,
+                    isHorizontal = localRun.isHorizontal,
                     type = localRun.type
                 };
                 foreach (var c in localRun.cells)
@@ -122,8 +122,10 @@ namespace RoomGen
         /// ends against plain wall).
         ///
         /// Sizing rules:
-        /// - If either side is AlwaysDouble: always try for a 2x1, even if the other side
-        ///   is Restricted (that's the whole point of AlwaysDouble - it overrides the
+        /// - forceDoubleOverride (used for corridor-to-corridor connections) always wins:
+        ///   ignores both sides' declared types entirely and always tries for a 2x1.
+        /// - Else, if either side is AlwaysDouble: always try for a 2x1, even if the other
+        ///   side is Restricted (that's the whole point of AlwaysDouble - it overrides the
         ///   partner's restriction).
         /// - Else if either side is Restricted: always 1x1, no exceptions.
         /// - Else (both Normal): normally always try for a 2x1 when there's room.
@@ -133,11 +135,11 @@ namespace RoomGen
         /// Falls back to 1x1 whenever there isn't physically room for a 2x1, regardless of
         /// which rule above applied.
         /// </summary>
-        public DoorSize ResolveConnection(List<Vector2Int> overlapCellsInOrder, ConnectorType typeA, ConnectorType typeB, System.Random rng, float? overrideDoubleChance = null)
+        public DoorSize ResolveConnection(List<Vector2Int> overlapCellsInOrder, ConnectorType typeA, ConnectorType typeB, System.Random rng, float? overrideDoubleChance = null, bool forceDoubleOverride = false)
         {
             foreach (var c in overlapCellsInOrder) SetNormal(c, NormalType.Wall);
 
-            bool forceDouble = typeA == ConnectorType.AlwaysDouble || typeB == ConnectorType.AlwaysDouble;
+            bool forceDouble = forceDoubleOverride || typeA == ConnectorType.AlwaysDouble || typeB == ConnectorType.AlwaysDouble;
             bool forceSingle = !forceDouble && (typeA == ConnectorType.Restricted || typeB == ConnectorType.Restricted);
 
             if (overlapCellsInOrder.Count <= 2)

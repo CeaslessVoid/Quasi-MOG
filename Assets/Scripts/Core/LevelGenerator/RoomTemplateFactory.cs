@@ -37,6 +37,16 @@ namespace RoomGen
         }
 
         /// <summary>
+        /// Flags a single arbitrary Wall cell as a connector - unlike AddConnector, this
+        /// isn't restricted to the room's named boundary edges, so it works for interior
+        /// walls too (e.g. an L-shaped corridor's inner corner).
+        /// </summary>
+        public static void AddConnectorCell(RoomTemplate t, int x, int y, ConnectorType type = ConnectorType.Normal)
+        {
+            t.SetConnector(x, y, type);
+        }
+
+        /// <summary>
         /// Flags a straight run of boundary wall cells along one edge as connectors.
         /// start/length are measured along the edge in the same order RoomTemplateUtility
         /// uses (increasing X for North/South, increasing Y for East/West).

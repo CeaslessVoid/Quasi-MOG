@@ -162,9 +162,9 @@ namespace RoomGen
                     _state.SetNormalAt(x, y, erase ? NormalType.Empty : _normalBrush);
                     break;
                 case BuilderTool.Connector:
-                    if (!_state.IsBoundary(x, y))
+                    if (_state.GetNormalAt(x, y) != NormalType.Wall)
                     {
-                        _statusMessage = "Connectors can only be placed on boundary walls.";
+                        _statusMessage = "Connectors can only be placed on Wall cells.";
                         return;
                     }
                     _state.SetConnectorAt(x, y, erase ? ConnectorType.None : _connectorBrush);
@@ -399,7 +399,7 @@ namespace RoomGen
                     DrawEnumBrushButtons(new[] { NormalType.Empty, NormalType.Wall, NormalType.Door }, _normalBrush, v => _normalBrush = v);
                     break;
                 case BuilderTool.Connector:
-                    GUILayout.Label("Connector Brush (boundary only)");
+                    GUILayout.Label("Connector Brush (any wall cell)");
                     DrawEnumBrushButtons(new[] { ConnectorType.None, ConnectorType.Normal, ConnectorType.Restricted, ConnectorType.AlwaysDouble }, _connectorBrush, v => _connectorBrush = v);
                     break;
                 case BuilderTool.Prop:

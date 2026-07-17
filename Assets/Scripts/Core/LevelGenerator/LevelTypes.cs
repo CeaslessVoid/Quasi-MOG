@@ -28,7 +28,7 @@ namespace RoomGen
     public class WorldConnectorRun
     {
         public int ownerRoomId;
-        public Edge localEdge;
+        public bool isHorizontal;
         public ConnectorType type;
         public List<Vector2Int> cells = new List<Vector2Int>(); // world space, ordered
         public ConnectorState state = ConnectorState.Open;

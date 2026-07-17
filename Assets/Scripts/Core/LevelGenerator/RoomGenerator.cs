@@ -23,6 +23,8 @@ namespace RoomGen
         [SerializeField] private int desiredRoomCount = 40;
         [SerializeField] private int minCorridors = 3;
         [SerializeField] private float corridorWeightMultiplierBeforeMinMet = 4f;
+        [Tooltip("Multiplies a corridor candidate's weight when the room it would attach to is ALSO a corridor - lower means corridors are less likely to chain directly into each other. When they do connect, that connection always forces a double door regardless of either side's connector type (see RoomGenerator.Generate).")]
+        [SerializeField] private float corridorToCorridorWeightMultiplier = 0.25f;
         [SerializeField] private int maxPlacementAttemptsPerConnector = 12;
 
         [Header("Random")]
@@ -84,7 +86,8 @@ namespace RoomGen
                 }
 
                 bool preferCorridor = corridorsPlaced < minCorridors;
-                var placement = TryFindPlacement(targetRun, preferCorridor);
+                bool ownerIsCorridor = ownerRoom.template.HasTag("corridor");
+                var placement = TryFindPlacement(targetRun, preferCorridor, ownerIsCorridor);
 
                 if (placement == null)
                 {
@@ -96,7 +99,9 @@ namespace RoomGen
                 roomsPlaced++;
                 if (placement.Value.template.HasTag("corridor")) corridorsPlaced++;
 
-                _grid.ResolveConnection(placement.Value.overlapCells, targetRun.type, placement.Value.candidateRunType, _rng);
+                bool corridorToCorridor = ownerIsCorridor && placement.Value.template.HasTag("corridor");
+                _grid.ResolveConnection(placement.Value.overlapCells, targetRun.type, placement.Value.candidateRunType, _rng,
+                    forceDoubleOverride: corridorToCorridor);
 
                 targetRun.state = ConnectorState.Connected;
                 targetRun.connectedToRoomId = newRoom.id;
@@ -190,7 +195,9 @@ namespace RoomGen
                         {
                             if (subSegment.Count == 0) continue;
 
-                            _grid.ResolveConnection(subSegment, runA.type, runB.type, _rng, a.template.reconnectionDoubleChance);
+                            _grid.ResolveConnection(subSegment, runA.type, runB.type, _rng,
+                                overrideDoubleChance: a.template.reconnectionDoubleChance,
+                                forceDoubleOverride: a.template.HasTag("corridor") && b.template.HasTag("corridor"));
                             return true; // one extra door per successful roll
                         }
                     }
@@ -242,7 +249,7 @@ namespace RoomGen
             public ConnectorType candidateRunType;
         }
 
-        private Placement? TryFindPlacement(WorldConnectorRun targetRun, bool preferCorridor)
+        private Placement? TryFindPlacement(WorldConnectorRun targetRun, bool preferCorridor, bool ownerIsCorridor)
         {
             var candidates = _activePool.Where(t => !t.HasTag("spawn")).ToList();
             if (candidates.Count == 0) return null;
@@ -251,7 +258,7 @@ namespace RoomGen
             while (attempts < maxPlacementAttemptsPerConnector)
             {
                 attempts++;
-                var candidateTemplate = PickWeighted(candidates, preferCorridor);
+                var candidateTemplate = PickWeighted(candidates, preferCorridor, ownerIsCorridor);
                 int rotationDeg = _rng.Next(0, 4) * 90;
 
                 var localRuns = RoomTemplateUtility.FindConnectorRuns(candidateTemplate)
@@ -308,7 +315,7 @@ namespace RoomGen
             return copy;
         }
 
-        private RoomTemplate PickWeighted(List<RoomTemplate> candidates, bool preferCorridor)
+        private RoomTemplate PickWeighted(List<RoomTemplate> candidates, bool preferCorridor, bool ownerIsCorridor)
         {
             float total = 0f;
             var weights = new float[candidates.Count];
@@ -316,6 +323,7 @@ namespace RoomGen
             {
                 float w = Mathf.Max(0.0001f, candidates[i].selectionWeight);
                 if (preferCorridor && candidates[i].HasTag("corridor")) w *= corridorWeightMultiplierBeforeMinMet;
+                if (ownerIsCorridor && candidates[i].HasTag("corridor")) w *= corridorToCorridorWeightMultiplier;
                 weights[i] = w;
                 total += w;
             }

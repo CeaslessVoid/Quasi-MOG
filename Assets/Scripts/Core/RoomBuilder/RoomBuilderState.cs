@@ -55,8 +55,14 @@ namespace RoomGen
         public void SetFloorAt(int x, int y, FloorType v) { if (InBounds(x, y)) floorLayer[Index(x, y)] = v; }
         public void SetNormalAt(int x, int y, NormalType v) { if (InBounds(x, y)) normalLayer[Index(x, y)] = v; }
 
-        /// <summary>Silently ignored on non-boundary cells - connectors only ever live on the room's edge.</summary>
-        public void SetConnectorAt(int x, int y, ConnectorType v) { if (InBounds(x, y) && IsBoundary(x, y)) connectorLayer[Index(x, y)] = v; }
+        /// <summary>
+        /// Any Wall cell can be flagged as a connector while editing - whether it actually
+        /// faces open/exterior space (and so is usable by the generator) is judged later by
+        /// RoomTemplateUtility.IsConnectorEligible, once the room's walls are finished. This
+        /// keeps editing order-independent: you can flag a connector before you've painted
+        /// the walls around it.
+        /// </summary>
+        public void SetConnectorAt(int x, int y, ConnectorType v) { if (InBounds(x, y) && GetNormalAt(x, y) == NormalType.Wall) connectorLayer[Index(x, y)] = v; }
 
         /// <summary>At most one prop per cell in v1 - placing on an occupied cell replaces it.</summary>
         public void SetProp(PropPlacement p)

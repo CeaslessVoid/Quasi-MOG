@@ -75,6 +75,9 @@ namespace RoomGen
 
         public bool IsBoundary(int x, int y) => x == 0 || y == 0 || x == width - 1 || y == height - 1;
 
+        /// <summary>See RoomTemplateUtility.IsConnectorEligible - any exposed wall, not just the rectangular boundary.</summary>
+        public bool IsConnectorEligible(int x, int y) => RoomTemplateUtility.IsConnectorEligible(x, y, width, height, normalLayer);
+
 #if UNITY_EDITOR
         [ContextMenu("Allocate / Resize Layers")]
         private void AllocateLayers()
