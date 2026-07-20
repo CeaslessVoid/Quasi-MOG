@@ -3,11 +3,7 @@ using UnityEngine;
 
 namespace RoomGen
 {
-    /// <summary>
-    /// Renders a RoomBuilderState as colored quads (no art yet - this is the "debug draw"
-    /// layer). Pooled SpriteRenderers rather than IMGUI/Gizmos so it actually shows up at
-    /// runtime/in builds, not just the editor Scene view.
-    /// </summary>
+
     public class RoomBuilderVisuals : MonoBehaviour
     {
         [SerializeField] private float cellSize = 1f;

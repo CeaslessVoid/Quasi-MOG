@@ -4,12 +4,6 @@ using UnityEngine;
 
 namespace RoomGen
 {
-    /// <summary>
-    /// Grows a level outward from a single "spawn"-tagged room by repeatedly picking an
-    /// open connector, deciding whether to grow through it, and fitting a candidate room's
-    /// own connector run into the overlap. See README.md in this folder for the full
-    /// algorithm write-up and known simplifications.
-    /// </summary>
     public class RoomGenerator : MonoBehaviour
     {
         [Header("Room Pool")]
@@ -19,7 +13,7 @@ namespace RoomGen
 
         private List<RoomTemplate> _activePool;
 
-        [Header("Generation Targets (tweak freely)")]
+        [Header("Generation Targets")]
         [SerializeField] private int desiredRoomCount = 40;
         [SerializeField] private int minCorridors = 3;
         [Tooltip("Boosts a corridor candidate's weight for ANY connector while the level still has fewer than minCorridors corridors placed - guarantees the minimum gets reached.")]

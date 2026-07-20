@@ -773,7 +773,7 @@ Transform:
   - {fileID: 946605101}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1654393990
+--- !u!1 &1736498590
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -781,23 +781,34 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1654393992}
-  - component: {fileID: 1654393993}
-  - component: {fileID: 1654393994}
+  - component: {fileID: 1736498592}
+  - component: {fileID: 1736498591}
   m_Layer: 0
-  m_Name: RoomGenerator
+  m_Name: GameManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1654393992
+--- !u!114 &1736498591
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1736498590}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 286c0b46d5d7fbf42a84060fb95afa56, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameManager
+--- !u!4 &1736498592
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1654393990}
+  m_GameObject: {fileID: 1736498590}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -806,45 +817,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1654393993
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1654393990}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ca4a7d3cb828e8743b45ba2122e943d6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RoomGen.RoomGenerator
-  autoLoadFromRoomLibrary: 1
-  roomTemplates: []
-  desiredRoomCount: 40
-  minCorridors: 2
-  corridorWeightMultiplierBeforeMinMet: 4
-  corridorWeightMultiplierAfterMinMet: 0.35
-  corridorToCorridorWeightMultiplier: 0.25
-  maxConsecutiveCorridors: 1
-  maxPlacementAttemptsPerConnector: 25
-  overflowGrowthDamping: 0.6
-  useFixedSeed: 0
-  seed: 12345
-  guaranteeDoorsOnConnectorOverlap: 1
-  drawGizmos: 1
-  cellSize: 1
---- !u!114 &1654393994
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1654393990}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cd00c912e904bcc41a83bc557c332f9c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RoomGen.RoomGenTestBootstrap
 --- !u!1 &2107562904
 GameObject:
   m_ObjectHideFlags: 0
@@ -930,6 +902,6 @@ SceneRoots:
   m_Roots:
   - {fileID: 1395100283}
   - {fileID: 1239296564}
-  - {fileID: 1654393992}
   - {fileID: 634982911}
+  - {fileID: 1736498592}
   - {fileID: 1490055685}

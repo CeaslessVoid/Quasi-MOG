@@ -56,8 +56,6 @@ namespace RoomGen
 
                     if (_cells.TryGetValue(world, out var existingCell))
                     {
-                        // Merging onto shared boundary cells from the room we're attaching to -
-                        // don't stomp what's already there, just fill gaps.
                         if (cell.floor == FloorType.Void) cell.floor = existingCell.floor;
                         if (cell.normal == NormalType.Empty) cell.normal = existingCell.normal;
                         cell.ownerRoomId = existingCell.ownerRoomId;
@@ -97,30 +95,6 @@ namespace RoomGen
             cell.normal = type;
             _cells[pos] = cell;
         }
-
-        /// <summary>
-        /// Resolves an overlap between two connector runs into a door.
-        ///
-        /// For overlaps of 3+ cells, the two outermost cells are never eligible (so a door
-        /// never touches where the run ends against plain wall) - eligibility is judged on
-        /// what's left after trimming those. For overlaps of exactly 1 or 2 cells, there's
-        /// no separate "interior" to trim down to, so all of the available cells are used
-        /// directly instead.
-        ///
-        /// Sizing rules:
-        /// - forceDoubleOverride (used for corridor-to-corridor connections) always wins:
-        ///   ignores both sides' declared types entirely and always tries for a 2x1.
-        /// - Else, if either side is AlwaysDouble: always try for a 2x1, even if the other
-        ///   side is Restricted (that's the whole point of AlwaysDouble - it overrides the
-        ///   partner's restriction).
-        /// - Else if either side is Restricted: always 1x1, no exceptions.
-        /// - Else (both Normal): normally always try for a 2x1 when there's room.
-        ///   overrideDoubleChance lets a caller replace that "always" with a coin flip
-        ///   instead - used for the reconnection pass, where extra doors are meant to be
-        ///   more varied than the deterministic primary connection.
-        /// Falls back to 1x1 whenever there isn't physically room for a 2x1, regardless of
-        /// which rule above applied.
-        /// </summary>
         public DoorSize ResolveConnection(List<Vector2Int> overlapCellsInOrder, ConnectorType typeA, ConnectorType typeB, System.Random rng, float? overrideDoubleChance = null, bool forceDoubleOverride = false)
         {
             foreach (var c in overlapCellsInOrder) SetNormal(c, NormalType.Wall);
@@ -128,18 +102,12 @@ namespace RoomGen
             bool forceDouble = forceDoubleOverride || typeA == ConnectorType.AlwaysDouble || typeB == ConnectorType.AlwaysDouble;
             bool forceSingle = !forceDouble && (typeA == ConnectorType.Restricted || typeB == ConnectorType.Restricted);
 
-            // With only 1 cell total, there's only ever room for a single door - no
-            // trimming to speak of.
             if (overlapCellsInOrder.Count == 1)
             {
                 SetNormal(overlapCellsInOrder[0], NormalType.Door);
                 return DoorSize.Single1x1;
             }
 
-            // With exactly 2 cells total, there's no separate "interior" to trim down to -
-            // the 2 cells ARE the whole available space, so a forced/likely double just
-            // uses both of them directly instead of falling back to single the way the
-            // general case below does when trimming would leave nothing eligible.
             if (overlapCellsInOrder.Count == 2)
             {
                 bool wantsDoubleHere = forceDouble || (!forceSingle && (!overrideDoubleChance.HasValue || rng.NextDouble() < overrideDoubleChance.Value));
@@ -160,7 +128,7 @@ namespace RoomGen
             if (forceSingle) wantsDouble = false;
             else if (forceDouble) wantsDouble = true;
             else if (overrideDoubleChance.HasValue) wantsDouble = rng.NextDouble() < overrideDoubleChance.Value;
-            else wantsDouble = true; // primary Normal/Normal connection: always prefer double when possible
+            else wantsDouble = true;
 
             if (wantsDouble && canDouble)
             {
@@ -175,7 +143,6 @@ namespace RoomGen
             return DoorSize.Single1x1;
         }
 
-        /// <summary>True if any of the 4 orthogonal neighbors of cell is a Door.</summary>
         public bool IsAdjacentToDoor(Vector2Int cell)
         {
             return GetCell(cell + Vector2Int.up).normal == NormalType.Door
