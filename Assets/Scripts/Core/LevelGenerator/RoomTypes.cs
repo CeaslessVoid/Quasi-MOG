@@ -20,16 +20,16 @@ namespace RoomGen
     {
         None = 0,
         Normal = 1,
-        Restricted = 2, // always resolves to a 1x1 door, never 2x1
-        AlwaysDouble = 3, // tries to resolve to a 2x1 door even if the partner side is Restricted
+        Restricted = 2,
+        AlwaysDouble = 3,
     }
 
     public enum Edge
     {
-        North = 0, // +Y (max Y row)
-        East = 1,  // +X (max X column)
-        South = 2, // -Y (Y = 0 row)
-        West = 3,  // -X (X = 0 column)
+        North = 0,
+        East = 1,
+        South = 2,
+        West = 3,
     }
 
     public enum ConnectorState
@@ -46,26 +46,26 @@ namespace RoomGen
         Double2x1 = 2,
     }
 
-    /// <summary>
-    /// A discrete placed object (prop/furniture/machine). Carries rotation, unlike
-    /// walls/doors which have no stored orientation and are inferred visually at build time.
-    /// baseRotationDeg is applied on top of the room's own rotation when the room is placed.
-    /// </summary>
+
     [Serializable]
     public struct PropPlacement
     {
         public string propId;
         public int cellX;
         public int cellY;
-        public int baseRotationDeg; // 0/90/180/270
+        public PropRotation rotation;
+
+        public enum PropRotation
+        {
+            North = 0,
+            East = 1,
+            South = 2,
+            West = 3,
+        }
     }
 
-    /// <summary>
-    /// Reserved for future ceiling props (lights, vents, sprinklers, etc). Stub only - not
-    /// read or written by the generator yet.
-    /// </summary>
     [Serializable]
-    public struct CeilingCellStub
+    public struct CeilingCell
     {
         public string propId;
     }

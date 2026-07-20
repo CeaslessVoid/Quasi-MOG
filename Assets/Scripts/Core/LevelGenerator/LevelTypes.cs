@@ -47,6 +47,14 @@ namespace RoomGen
         public RectInt worldBounds;
         public List<WorldConnectorRun> connectorRuns = new List<WorldConnectorRun>();
 
+        /// <summary>
+        /// 0 for a non-corridor room. For a corridor, how many corridors deep this one is
+        /// in an unbroken corridor-to-corridor chain (1 = attached straight off a normal
+        /// room, 2 = attached to another corridor that was itself attached off a normal
+        /// room, etc). Used to cap runaway corridor chains - see RoomGenerator.
+        /// </summary>
+        public int corridorChainDepth = 0;
+
         public int ResolvedConnectionCount
         {
             get

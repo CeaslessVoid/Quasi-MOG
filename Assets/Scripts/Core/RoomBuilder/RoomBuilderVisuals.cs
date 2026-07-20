@@ -12,9 +12,20 @@ namespace RoomGen
     {
         [SerializeField] private float cellSize = 1f;
 
+        [Header("Textures")]
+        [Tooltip("The 4x4 'linked wall' atlas - see WallAtlas.cs for the tile-mapping notes.")]
+        [SerializeField] private Texture2D wallAtlasTexture;
+        [SerializeField] private float wallPixelsPerUnit = 100f;
+        [Tooltip("Single flooring texture - no autotiling, just tiled per cell. Leave unassigned to keep the flat debug color.")]
+        [SerializeField] private Texture2D floorTexture;
+        [SerializeField] private float floorPixelsPerUnit = 100f;
+
+        private WallAtlas _wallAtlas;
+        private Sprite _floorSprite;
         private Sprite _solidSprite;
         private Transform _root;
         private Transform _gridRoot;
+        private bool _initialized;
 
         private readonly Dictionary<Vector2Int, SpriteRenderer> _floorRenderers = new Dictionary<Vector2Int, SpriteRenderer>();
         private readonly Dictionary<Vector2Int, SpriteRenderer> _normalRenderers = new Dictionary<Vector2Int, SpriteRenderer>();
@@ -29,11 +40,36 @@ namespace RoomGen
 
         public float CellSize => cellSize;
 
-        private void Awake()
+        /// <summary>
+        /// Lets a bootstrap assign textures when creating this component in code. Unity
+        /// calls Awake() synchronously during AddComponent, before a caller has a chance to
+        /// call this - so initialization is idempotent and safe to re-run here.
+        /// </summary>
+        public void ConfigureTextures(Texture2D wallAtlas, Texture2D floor)
         {
+            wallAtlasTexture = wallAtlas;
+            floorTexture = floor;
+            _initialized = false;
+            EnsureInitialized();
+        }
+
+        private void Awake() => EnsureInitialized();
+
+        private void EnsureInitialized()
+        {
+            if (_initialized) return;
+            _initialized = true;
+
             _solidSprite = CreateSolidSprite();
-            _root = new GameObject("BuilderVisualsRoot").transform;
-            _root.SetParent(transform, false);
+            _wallAtlas = new WallAtlas(wallAtlasTexture, 4, 4, wallPixelsPerUnit);
+            if (floorTexture != null)
+                _floorSprite = Sprite.Create(floorTexture, new Rect(0, 0, floorTexture.width, floorTexture.height), new Vector2(0.5f, 0.5f), floorPixelsPerUnit);
+
+            if (_root == null)
+            {
+                _root = new GameObject("BuilderVisualsRoot").transform;
+                _root.SetParent(transform, false);
+            }
         }
 
         private static Sprite CreateSolidSprite()
@@ -146,6 +182,7 @@ namespace RoomGen
 
         public void RefreshCell(RoomBuilderState state, int x, int y)
         {
+            if (!state.InBounds(x, y)) return; // painting a wall can trigger neighbor refreshes just outside the room
             var cell = new Vector2Int(x, y);
 
             var floor = state.GetFloorAt(x, y);
@@ -154,22 +191,50 @@ namespace RoomGen
             {
                 floorR.enabled = false;
             }
+            else if (floor == FloorType.Water)
+            {
+                floorR.enabled = true;
+                floorR.sprite = _solidSprite;
+                floorR.color = new Color(0.2f, 0.4f, 0.9f); // no water texture yet - flat debug color
+            }
+            else if (_floorSprite != null)
+            {
+                floorR.enabled = true;
+                floorR.sprite = _floorSprite;
+                floorR.color = Color.white;
+            }
             else
             {
                 floorR.enabled = true;
-                floorR.color = floor == FloorType.Water ? new Color(0.2f, 0.4f, 0.9f) : new Color(0.55f, 0.55f, 0.55f);
+                floorR.sprite = _solidSprite;
+                floorR.color = new Color(0.55f, 0.55f, 0.55f); // no floor texture assigned - flat debug color
             }
 
             var normal = state.GetNormalAt(x, y);
             var normalR = _normalRenderers[cell];
-            if (normal == NormalType.Empty)
+            if (normal == NormalType.Wall)
             {
-                normalR.enabled = false;
+                bool n = IsWallLike(state, x, y + 1);
+                bool e = IsWallLike(state, x + 1, y);
+                bool s = IsWallLike(state, x, y - 1);
+                bool w = IsWallLike(state, x - 1, y);
+                int bitmask = WallAtlas.ComputeBitmask(n, e, s, w);
+
+                normalR.enabled = true;
+                normalR.sprite = _wallAtlas.GetSprite(bitmask);
+                normalR.color = Color.white;
+            }
+            else if (normal == NormalType.Door)
+            {
+                // No door art yet - a thin debug marker so it's visible while editing, but
+                // doesn't render as a solid wall (a door is an opening).
+                normalR.enabled = true;
+                normalR.sprite = _solidSprite;
+                normalR.color = new Color(0.65f, 0.4f, 0.1f, 0.5f);
             }
             else
             {
-                normalR.enabled = true;
-                normalR.color = normal == NormalType.Door ? new Color(0.65f, 0.4f, 0.1f) : new Color(0.15f, 0.15f, 0.15f);
+                normalR.enabled = false;
             }
 
             var conn = state.GetConnectorAt(x, y);
@@ -181,6 +246,7 @@ namespace RoomGen
             else
             {
                 connR.enabled = true;
+                connR.sprite = _solidSprite;
                 connR.color = conn switch
                 {
                     ConnectorType.Restricted => new Color(1f, 0.3f, 0.1f, 0.55f),
@@ -188,6 +254,19 @@ namespace RoomGen
                     _ => new Color(1f, 0.95f, 0.2f, 0.45f)
                 };
             }
+        }
+
+        /// <summary>
+        /// Whether a neighbor cell counts as "wall-like" for autotiling purposes - a Door
+        /// counts (a wall visually continues into the doorway from this cell's side), a
+        /// neighbor outside the room's grid does NOT (there's genuinely nothing there, so
+        /// this wall should show an exposed/open edge, same as a real boundary wall would).
+        /// </summary>
+        private static bool IsWallLike(RoomBuilderState state, int x, int y)
+        {
+            if (!state.InBounds(x, y)) return false;
+            var n = state.GetNormalAt(x, y);
+            return n == NormalType.Wall || n == NormalType.Door;
         }
 
         public void RefreshProp(PropPlacement p)
@@ -199,7 +278,7 @@ namespace RoomGen
                 _propVisuals[cell] = pv;
             }
             pv.body.color = ColorForPropId(p.propId);
-            pv.root.localRotation = Quaternion.Euler(0f, 0f, -p.baseRotationDeg);
+            //pv.root.localRotation = Quaternion.Euler(0f, 0f, -p.baseRotation); #TODO
         }
 
         private PropVisual CreatePropVisual(Vector2Int cell)

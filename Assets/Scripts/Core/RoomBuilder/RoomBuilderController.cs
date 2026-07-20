@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using static RoomGen.PropPlacement;
 
 namespace RoomGen
 {
@@ -20,12 +21,6 @@ namespace RoomGen
         [SerializeField] private RoomBuilderVisuals visuals;
         [SerializeField] private float panelWidth = 300f;
 
-        [Header("Camera Control")]
-        [SerializeField] private float panSpeed = 10f;
-        [SerializeField] private float zoomSpeed = 5f;
-        [SerializeField] private float minZoom = 2f;
-        [SerializeField] private float maxZoom = 40f;
-
         private RoomBuilderState _state;
         private BuilderTool _tool = BuilderTool.Floor;
 
@@ -34,7 +29,7 @@ namespace RoomGen
         private ConnectorType _connectorBrush = ConnectorType.Normal;
 
         private string _currentPropId = "prop_crate";
-        private int _currentPropRotation = 0;
+        private PropRotation _currentPropRotation = PropRotation.North;
         private Vector2Int? _selectedPropCell;
 
         private Vector2Int? _lastPaintCellLeft;
@@ -68,8 +63,6 @@ namespace RoomGen
 
         private void Update()
         {
-            HandleCameraControls();
-
             if (_state == null || targetCamera == null) return;
             if (Input.mousePosition.x < panelWidth) return; // pointer is over the tool panel
 
@@ -111,31 +104,6 @@ namespace RoomGen
             else _lastPaintCellRight = null;
         }
 
-        private void HandleCameraControls()
-        {
-            if (targetCamera == null || IsTypingInField) return;
-
-            Vector3 move = Vector3.zero;
-            if (Input.GetKey(KeyCode.W)) move.y += 1f;
-            if (Input.GetKey(KeyCode.S)) move.y -= 1f;
-            if (Input.GetKey(KeyCode.A)) move.x -= 1f;
-            if (Input.GetKey(KeyCode.D)) move.x += 1f;
-
-            if (move != Vector3.zero)
-            {
-                // Scale pan speed with zoom so it feels the same whether zoomed in or out.
-                float speedScale = targetCamera.orthographicSize / 10f;
-                targetCamera.transform.position += move.normalized * (panSpeed * speedScale * Time.deltaTime);
-            }
-
-            if (Input.mousePosition.x >= panelWidth)
-            {
-                float scroll = Input.GetAxis("Mouse ScrollWheel");
-                if (Mathf.Abs(scroll) > 0.0001f)
-                    targetCamera.orthographicSize = Mathf.Clamp(targetCamera.orthographicSize - scroll * zoomSpeed, minZoom, maxZoom);
-            }
-        }
-
         private void PaintLine(Vector2Int from, Vector2Int to, bool erase)
         {
             int steps = Mathf.Max(Mathf.Abs(to.x - from.x), Mathf.Abs(to.y - from.y));
@@ -157,9 +125,17 @@ namespace RoomGen
             {
                 case BuilderTool.Floor:
                     _state.SetFloorAt(x, y, erase ? FloorType.Void : _floorBrush);
+                    visuals.RefreshCell(_state, x, y);
                     break;
                 case BuilderTool.Normal:
                     _state.SetNormalAt(x, y, erase ? NormalType.Empty : _normalBrush);
+                    // A wall's sprite depends on its neighbors, so painting/erasing one
+                    // cell can change up to 4 neighboring cells' autotile sprite too.
+                    visuals.RefreshCell(_state, x, y);
+                    visuals.RefreshCell(_state, x + 1, y);
+                    visuals.RefreshCell(_state, x - 1, y);
+                    visuals.RefreshCell(_state, x, y + 1);
+                    visuals.RefreshCell(_state, x, y - 1);
                     break;
                 case BuilderTool.Connector:
                     if (_state.GetNormalAt(x, y) != NormalType.Wall)
@@ -168,9 +144,9 @@ namespace RoomGen
                         return;
                     }
                     _state.SetConnectorAt(x, y, erase ? ConnectorType.None : _connectorBrush);
+                    visuals.RefreshCell(_state, x, y);
                     break;
             }
-            visuals.RefreshCell(_state, x, y);
         }
 
         private void PlaceOrSelectProp(int x, int y)
@@ -187,7 +163,7 @@ namespace RoomGen
                 propId = string.IsNullOrEmpty(_currentPropId) ? "prop" : _currentPropId,
                 cellX = x,
                 cellY = y,
-                baseRotationDeg = _currentPropRotation
+                rotation = _currentPropRotation
             };
             _state.SetProp(prop);
             visuals.RefreshProp(prop);
@@ -208,7 +184,7 @@ namespace RoomGen
             if (!existing.HasValue) return;
 
             var p = existing.Value;
-            p.baseRotationDeg = (p.baseRotationDeg + 90) % 360;
+            p.rotation = p.rotation == PropRotation.West ? (p.rotation + 1) : p.rotation = 0;
             _state.SetProp(p);
             visuals.RefreshProp(p);
         }
@@ -406,7 +382,7 @@ namespace RoomGen
                     GUILayout.Label("Prop Id");
                     _currentPropId = GUILayout.TextField(_currentPropId);
                     GUILayout.Label($"Placement Rotation: {_currentPropRotation}°");
-                    if (GUILayout.Button("Rotate Pending +90")) _currentPropRotation = (_currentPropRotation + 90) % 360;
+                    if (GUILayout.Button("Rotate Pending +90")) _currentPropRotation = _currentPropRotation == PropRotation.West ? _currentPropRotation + 1 : _currentPropRotation = 0;
                     GUILayout.Label("Click: place/select   Right-click: delete   R: rotate selected");
                     break;
             }

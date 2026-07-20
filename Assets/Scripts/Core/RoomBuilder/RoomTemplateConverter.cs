@@ -16,7 +16,7 @@ namespace RoomGen
             t.floorLayer = (FloorType[])state.floorLayer.Clone();
             t.normalLayer = (NormalType[])state.normalLayer.Clone();
             t.connectorLayer = (ConnectorType[])state.connectorLayer.Clone();
-            t.ceilingLayer = new CeilingCellStub[state.width * state.height];
+            t.ceilingLayer = new CeilingCell[state.width * state.height];
             t.props = new List<PropPlacement>(state.props);
             t.desiredConnections = state.desiredConnections;
             t.extraConnectionChance = state.extraConnectionChance;

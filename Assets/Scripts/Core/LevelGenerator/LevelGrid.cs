@@ -3,10 +3,6 @@ using UnityEngine;
 
 namespace RoomGen
 {
-    /// <summary>
-    /// Sparse master grid for a generated level. Pure C# / no MonoBehaviour dependency -
-    /// safe to build and inspect in edit-mode tests.
-    /// </summary>
     public class LevelGrid
     {
         private readonly Dictionary<Vector2Int, LevelCell> _cells = new Dictionary<Vector2Int, LevelCell>();
@@ -17,16 +13,6 @@ namespace RoomGen
 
         public bool HasCell(Vector2Int pos) => _cells.ContainsKey(pos);
 
-        /// <summary>
-        /// Checks whether a room template can be stamped at the given origin/rotation.
-        /// A cell may only be shared with something already in the grid if BOTH sides are
-        /// Wall - that's what a shared seam between two rooms actually is. A room's
-        /// connecting edge is almost always longer than the specific connector run being
-        /// used to attach it (corner wall cells beyond the run), and those still need to
-        /// land on the other room's wall without being treated as a collision - hence
-        /// checking "is this cell a wall on both sides" rather than "is this cell part of
-        /// the exact overlap we pre-computed for the door."
-        /// </summary>
         public bool CanPlace(RoomTemplate t, Vector2Int origin, int rotationDeg)
         {
             for (int y = 0; y < t.height; y++)
@@ -44,10 +30,6 @@ namespace RoomGen
             return true;
         }
 
-        /// <summary>
-        /// Writes a template's layers into the grid at origin/rotation and registers it as
-        /// a PlacedRoom with world-space connector runs. Assumes CanPlace was already checked.
-        /// </summary>
         public PlacedRoom Stamp(RoomTemplate t, Vector2Int origin, int rotationDeg)
         {
             var room = new PlacedRoom
@@ -78,7 +60,7 @@ namespace RoomGen
                         // don't stomp what's already there, just fill gaps.
                         if (cell.floor == FloorType.Void) cell.floor = existingCell.floor;
                         if (cell.normal == NormalType.Empty) cell.normal = existingCell.normal;
-                        cell.ownerRoomId = existingCell.ownerRoomId; // first owner keeps the credit
+                        cell.ownerRoomId = existingCell.ownerRoomId;
                     }
 
                     _cells[world] = cell;
@@ -117,9 +99,13 @@ namespace RoomGen
         }
 
         /// <summary>
-        /// Resolves an overlap between two connector runs into a door. The two outermost
-        /// cells of the overlap are never eligible (so a door never touches where the run
-        /// ends against plain wall).
+        /// Resolves an overlap between two connector runs into a door.
+        ///
+        /// For overlaps of 3+ cells, the two outermost cells are never eligible (so a door
+        /// never touches where the run ends against plain wall) - eligibility is judged on
+        /// what's left after trimming those. For overlaps of exactly 1 or 2 cells, there's
+        /// no separate "interior" to trim down to, so all of the available cells are used
+        /// directly instead.
         ///
         /// Sizing rules:
         /// - forceDoubleOverride (used for corridor-to-corridor connections) always wins:
@@ -142,10 +128,28 @@ namespace RoomGen
             bool forceDouble = forceDoubleOverride || typeA == ConnectorType.AlwaysDouble || typeB == ConnectorType.AlwaysDouble;
             bool forceSingle = !forceDouble && (typeA == ConnectorType.Restricted || typeB == ConnectorType.Restricted);
 
-            if (overlapCellsInOrder.Count <= 2)
+            // With only 1 cell total, there's only ever room for a single door - no
+            // trimming to speak of.
+            if (overlapCellsInOrder.Count == 1)
             {
-                var mid = overlapCellsInOrder[overlapCellsInOrder.Count / 2];
-                SetNormal(mid, NormalType.Door);
+                SetNormal(overlapCellsInOrder[0], NormalType.Door);
+                return DoorSize.Single1x1;
+            }
+
+            // With exactly 2 cells total, there's no separate "interior" to trim down to -
+            // the 2 cells ARE the whole available space, so a forced/likely double just
+            // uses both of them directly instead of falling back to single the way the
+            // general case below does when trimming would leave nothing eligible.
+            if (overlapCellsInOrder.Count == 2)
+            {
+                bool wantsDoubleHere = forceDouble || (!forceSingle && (!overrideDoubleChance.HasValue || rng.NextDouble() < overrideDoubleChance.Value));
+                if (wantsDoubleHere)
+                {
+                    SetNormal(overlapCellsInOrder[0], NormalType.Door);
+                    SetNormal(overlapCellsInOrder[1], NormalType.Door);
+                    return DoorSize.Double2x1;
+                }
+                SetNormal(overlapCellsInOrder[rng.Next(0, 2)], NormalType.Door);
                 return DoorSize.Single1x1;
             }
 

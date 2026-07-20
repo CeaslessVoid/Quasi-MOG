@@ -3,60 +3,46 @@ using UnityEngine;
 
 namespace RoomGen
 {
-    /// <summary>
-    /// A room's authored data: fixed size grid, three layers (Floor, Normal, reserved
-    /// Ceiling-stub), boundary connector designators, and discrete props. This is pure
-    /// data - it has no idea whether/where it's been placed in a level.
-    /// </summary>
     [CreateAssetMenu(fileName = "NewRoomTemplate", menuName = "RoomGen/Room Template")]
     public class RoomTemplate : ScriptableObject
     {
-        [Header("Size (fixed once authored, min 3x3)")]
+        [Header("Size")]
         [Min(3)] public int width = 3;
         [Min(3)] public int height = 3;
 
         [Header("Tags")]
-        [Tooltip("Functional type: spawn, corridor, factory, living_quarters, outside, etc.")]
         public List<string> typeTags = new List<string>();
 
-        [Tooltip("Reserved - base-location tagging, lightly used for now.")]
         public List<string> zoneTags = new List<string>();
 
-        [Header("Layers (flattened, index = y * width + x)")]
         public FloorType[] floorLayer;
         public NormalType[] normalLayer;
 
-        [Tooltip("Only meaningful on boundary cells. Interior cells should stay None.")]
         public ConnectorType[] connectorLayer;
 
-        [Header("Reserved - stub only, not read/written by the generator yet")]
-        public CeilingCellStub[] ceilingLayer;
+        public CeilingCell[] ceilingLayer;
 
-        [Header("Props (carry rotation; do not block placement checks in v1)")]
+        [Header("Props")]
         public List<PropPlacement> props = new List<PropPlacement>();
 
-        [Header("Generation weighting - tweak freely")]
-        [Tooltip("How many resolved connections this room 'wants' before it stops actively seeking more.")]
+        [Header("Generation weighting")]
         public int desiredConnections = 2;
 
         [Range(0f, 1f)]
-        [Tooltip("Chance to still attempt a connection once desiredConnections has already been reached.")]
         public float extraConnectionChance = 0.15f;
 
         [Range(0f, 1f)]
-        [Tooltip("Chance to attempt a connection while still below desiredConnections.")]
         public float chanceToConnectWhenBelowTarget = 0.9f;
 
-        [Tooltip("Relative weight when the generator picks a candidate room to grow into an open connector.")]
         public float selectionWeight = 1f;
 
-        [Header("Reconnection (extra doors between already-connected rooms)")]
+        [Header("Reconnection")]
         [Range(0f, 1f)]
         [Tooltip("Chance this room tries to open a second door to a room it's already connected to, if space allows.")]
         public float reconnectionChance = 0.2f;
 
         [Range(0f, 1f)]
-        [Tooltip("For reconnections only: chance the extra door is a 2x1 instead of 1x1, when a 2x1 would physically fit. Restricted connectors always stay 1x1 regardless of this.")]
+        [Tooltip("For reconnections only: chance the extra door is a 2x1 instead of 1x1, when a 2x1 would physically fit.")]
         public float reconnectionDoubleChance = 0.5f;
 
         public bool HasTag(string tag) => typeTags != null && typeTags.Contains(tag);
@@ -75,7 +61,6 @@ namespace RoomGen
 
         public bool IsBoundary(int x, int y) => x == 0 || y == 0 || x == width - 1 || y == height - 1;
 
-        /// <summary>See RoomTemplateUtility.IsConnectorEligible - any exposed wall, not just the rectangular boundary.</summary>
         public bool IsConnectorEligible(int x, int y) => RoomTemplateUtility.IsConnectorEligible(x, y, width, height, normalLayer);
 
 #if UNITY_EDITOR

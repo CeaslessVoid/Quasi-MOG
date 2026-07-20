@@ -182,6 +182,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RoomGen.RoomBuilderBootstrap
   orthographicSize: 5
+  panelWidth: 300
+  wallAtlasTexture: {fileID: 2800000, guid: f62bd06e1141bcb439ce3c721be707ba, type: 3}
+  floorTexture: {fileID: 2800000, guid: 7fe48ce7083deac4098a05603bc4e8d0, type: 3}
 --- !u!4 &941354202
 Transform:
   m_ObjectHideFlags: 0

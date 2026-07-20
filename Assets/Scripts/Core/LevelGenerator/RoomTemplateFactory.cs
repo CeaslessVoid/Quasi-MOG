@@ -21,7 +21,7 @@ namespace RoomGen
             t.floorLayer = new FloorType[count];
             t.normalLayer = new NormalType[count];
             t.connectorLayer = new ConnectorType[count];
-            t.ceilingLayer = new CeilingCellStub[count];
+            t.ceilingLayer = new CeilingCell[count];
 
             for (int y = 0; y < t.height; y++)
             {
