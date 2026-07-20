@@ -388,7 +388,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 193c634883ca7ac4ba146bdd639b9916, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RoomGen.LevelViewerBootstrap
-  orthographicSize: 20
+  orthographicSize: 200
   wallAtlasTexture: {fileID: 2800000, guid: f62bd06e1141bcb439ce3c721be707ba, type: 3}
   floorTexture: {fileID: 2800000, guid: 7fe48ce7083deac4098a05603bc4e8d0, type: 3}
 --- !u!4 &634982911

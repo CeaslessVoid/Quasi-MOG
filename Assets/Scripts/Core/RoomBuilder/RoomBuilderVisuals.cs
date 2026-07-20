@@ -3,7 +3,11 @@ using UnityEngine;
 
 namespace RoomGen
 {
-
+    /// <summary>
+    /// Renders a RoomBuilderState as colored quads (no art yet - this is the "debug draw"
+    /// layer). Pooled SpriteRenderers rather than IMGUI/Gizmos so it actually shows up at
+    /// runtime/in builds, not just the editor Scene view.
+    /// </summary>
     public class RoomBuilderVisuals : MonoBehaviour
     {
         [SerializeField] private float cellSize = 1f;
@@ -253,16 +257,15 @@ namespace RoomGen
         }
 
         /// <summary>
-        /// Whether a neighbor cell counts as "wall-like" for autotiling purposes - a Door
-        /// counts (a wall visually continues into the doorway from this cell's side), a
-        /// neighbor outside the room's grid does NOT (there's genuinely nothing there, so
-        /// this wall should show an exposed/open edge, same as a real boundary wall would).
+        /// Whether a neighbor cell counts as "wall-like" for autotiling purposes - only a
+        /// real Wall does. A Door is an opening, so a wall next to one should show its
+        /// exposed edge, not act like the wall continues through the doorway. A neighbor
+        /// outside the room's grid also doesn't count, for the same reason.
         /// </summary>
         private static bool IsWallLike(RoomBuilderState state, int x, int y)
         {
             if (!state.InBounds(x, y)) return false;
-            var n = state.GetNormalAt(x, y);
-            return n == NormalType.Wall || n == NormalType.Door;
+            return state.GetNormalAt(x, y) == NormalType.Wall;
         }
 
         public void RefreshProp(PropPlacement p)
@@ -274,7 +277,7 @@ namespace RoomGen
                 _propVisuals[cell] = pv;
             }
             pv.body.color = ColorForPropId(p.propId);
-            //pv.root.localRotation = Quaternion.Euler(0f, 0f, -p.baseRotation); #TODO
+            //pv.root.localRotation = Quaternion.Euler(0f, 0f, -p.baseRotationDeg);
         }
 
         private PropVisual CreatePropVisual(Vector2Int cell)
