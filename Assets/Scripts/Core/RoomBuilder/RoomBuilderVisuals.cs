@@ -12,16 +12,15 @@ namespace RoomGen
     {
         [SerializeField] private float cellSize = 1f;
 
-        [Header("Textures")]
-        [Tooltip("The 4x4 'linked wall' atlas - see WallAtlas.cs for the tile-mapping notes.")]
-        [SerializeField] private Texture2D wallAtlasTexture;
-        [SerializeField] private float wallPixelsPerUnit = 100f;
-        [Tooltip("Single flooring texture - no autotiling, just tiled per cell. Leave unassigned to keep the flat debug color.")]
-        [SerializeField] private Texture2D floorTexture;
-        [SerializeField] private float floorPixelsPerUnit = 100f;
+        [Header("Wall Tiles - assign ONE of the two below (16 entries, left-to-right/top-to-bottom off the reference image)")]
+        [SerializeField] private UnityEngine.Tilemaps.TileBase[] wallTiles = new UnityEngine.Tilemaps.TileBase[16];
+        [SerializeField] private Sprite[] wallSprites = new Sprite[16];
+
+        [Header("Floor")]
+        [Tooltip("Pre-made floor Sprite. Leave unassigned to keep the flat debug color.")]
+        [SerializeField] private Sprite floorSprite;
 
         private WallAtlas _wallAtlas;
-        private Sprite _floorSprite;
         private Sprite _solidSprite;
         private Transform _root;
         private Transform _gridRoot;
@@ -41,14 +40,15 @@ namespace RoomGen
         public float CellSize => cellSize;
 
         /// <summary>
-        /// Lets a bootstrap assign textures when creating this component in code. Unity
+        /// Lets a bootstrap assign assets when creating this component in code. Unity
         /// calls Awake() synchronously during AddComponent, before a caller has a chance to
         /// call this - so initialization is idempotent and safe to re-run here.
         /// </summary>
-        public void ConfigureTextures(Texture2D wallAtlas, Texture2D floor)
+        public void ConfigureTextures(UnityEngine.Tilemaps.TileBase[] tiles, Sprite[] sprites, Sprite floor)
         {
-            wallAtlasTexture = wallAtlas;
-            floorTexture = floor;
+            wallTiles = tiles;
+            wallSprites = sprites;
+            floorSprite = floor;
             _initialized = false;
             EnsureInitialized();
         }
@@ -61,15 +61,20 @@ namespace RoomGen
             _initialized = true;
 
             _solidSprite = CreateSolidSprite();
-            _wallAtlas = new WallAtlas(wallAtlasTexture, 4, 4, wallPixelsPerUnit);
-            if (floorTexture != null)
-                _floorSprite = Sprite.Create(floorTexture, new Rect(0, 0, floorTexture.width, floorTexture.height), new Vector2(0.5f, 0.5f), floorPixelsPerUnit);
+            _wallAtlas = HasAny(wallTiles) ? new WallAtlas(wallTiles) : new WallAtlas(wallSprites);
 
             if (_root == null)
             {
                 _root = new GameObject("BuilderVisualsRoot").transform;
                 _root.SetParent(transform, false);
             }
+        }
+
+        private static bool HasAny<T>(T[] arr) where T : class
+        {
+            if (arr == null) return false;
+            foreach (var x in arr) if (x != null) return true;
+            return false;
         }
 
         private static Sprite CreateSolidSprite()
@@ -197,17 +202,17 @@ namespace RoomGen
                 floorR.sprite = _solidSprite;
                 floorR.color = new Color(0.2f, 0.4f, 0.9f); // no water texture yet - flat debug color
             }
-            else if (_floorSprite != null)
+            else if (floorSprite != null)
             {
                 floorR.enabled = true;
-                floorR.sprite = _floorSprite;
+                floorR.sprite = floorSprite;
                 floorR.color = Color.white;
             }
             else
             {
                 floorR.enabled = true;
                 floorR.sprite = _solidSprite;
-                floorR.color = new Color(0.55f, 0.55f, 0.55f); // no floor texture assigned - flat debug color
+                floorR.color = new Color(0.55f, 0.55f, 0.55f); // no floor sprite assigned - flat debug color
             }
 
             var normal = state.GetNormalAt(x, y);

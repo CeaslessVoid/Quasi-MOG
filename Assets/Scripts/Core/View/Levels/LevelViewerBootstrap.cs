@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 namespace RoomGen
 {
@@ -12,8 +13,11 @@ namespace RoomGen
     public class LevelViewerBootstrap : MonoBehaviour
     {
         [SerializeField] private float orthographicSize = 20f;
-        [SerializeField] private Texture2D wallAtlasTexture;
-        [SerializeField] private Texture2D floorTexture;
+
+        [Header("Wall Tiles - assign ONE of the two below")]
+        [SerializeField] private TileBase[] wallTiles = new TileBase[16];
+        [SerializeField] private Sprite[] wallSprites = new Sprite[16];
+        [SerializeField] private Sprite floorSprite;
 
         private void Start()
         {
@@ -38,7 +42,7 @@ namespace RoomGen
 
             var levelGO = new GameObject("LevelView");
             var visuals = levelGO.AddComponent<LevelVisuals>();
-            visuals.Configure(wallAtlasTexture, floorTexture);
+            visuals.Configure(wallTiles, wallSprites, floorSprite);
 
             var generator = levelGO.AddComponent<RoomGenerator>();
             generator.Generate();

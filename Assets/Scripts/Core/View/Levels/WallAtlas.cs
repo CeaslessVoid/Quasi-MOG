@@ -7,7 +7,7 @@ namespace RoomGen
     {
         public const int North = 1, East = 2, South = 4, West = 8;
 
-        private static readonly int[] BitmaskToGridIndex =
+        private static readonly int[] BitmaskToIndex =
         {
             /*  0 none        */ 12,
             /*  1 N            */ 13,
@@ -28,31 +28,33 @@ namespace RoomGen
         };
 
         private readonly Sprite[] _sprites;
-        private readonly Tile[] _tiles;
+        private readonly TileBase[] _tiles;
 
-        public WallAtlas(Texture2D atlasTexture, int columns, int rows, float pixelsPerUnit)
+        public WallAtlas(TileBase[] tiles)
         {
-            _sprites = new Sprite[columns * rows];
-            _tiles = new Tile[columns * rows];
+            _tiles = tiles ?? new TileBase[16];
+            _sprites = new Sprite[_tiles.Length];
+            for (int i = 0; i < _tiles.Length; i++)
+                _sprites[i] = (_tiles[i] as Tile)?.sprite;
+        }
 
-            if (atlasTexture == null)
+        /// <summary>
+        /// Build from 16 pre-cropped Sprite sub-assets instead of Tile assets. A matching
+        /// Tile is created at runtime wrapping each one purely so Tilemap has something to
+        /// place - the crop/pivot/PPU is entirely whatever's already baked into the Sprite,
+        /// no pixel math happens here.
+        /// </summary>
+        public WallAtlas(Sprite[] sprites)
+        {
+            _sprites = sprites ?? new Sprite[16];
+            _tiles = new TileBase[_sprites.Length];
+            for (int i = 0; i < _sprites.Length; i++)
             {
-                Debug.LogError("WallAtlas: no atlas texture assigned - walls will be invisible.");
-                return;
-            }
-
-            int tileW = atlasTexture.width / columns;
-            int tileH = atlasTexture.height / rows;
-
-            for (int row = 0; row < rows; row++)
-            {
-                for (int col = 0; col < columns; col++)
-                {
-                    int gridIndex = row * columns + col;
-                    int texRow = rows - 1 - row;
-                    var rect = new Rect(col * tileW, texRow * tileH, tileW, tileH);
-                    _sprites[gridIndex] = Sprite.Create(atlasTexture, rect, new Vector2(0.5f, 0.5f), pixelsPerUnit);
-                }
+                if (_sprites[i] == null) continue;
+                var tile = ScriptableObject.CreateInstance<Tile>();
+                tile.sprite = _sprites[i];
+                tile.colliderType = Tile.ColliderType.None;
+                _tiles[i] = tile;
             }
         }
 
@@ -68,23 +70,14 @@ namespace RoomGen
 
         public Sprite GetSprite(int bitmask)
         {
-            if (_sprites.Length == 0) return null;
-            return _sprites[BitmaskToGridIndex[Mathf.Clamp(bitmask, 0, 15)]];
+            if (_sprites == null || _sprites.Length == 0) return null;
+            return _sprites[BitmaskToIndex[Mathf.Clamp(bitmask, 0, 15)]];
         }
 
         public TileBase GetTile(int bitmask)
         {
-            if (_tiles.Length == 0) return null;
-            int gridIndex = BitmaskToGridIndex[Mathf.Clamp(bitmask, 0, 15)];
-
-            if (_tiles[gridIndex] == null)
-            {
-                var tile = ScriptableObject.CreateInstance<Tile>();
-                tile.sprite = _sprites[gridIndex];
-                tile.colliderType = Tile.ColliderType.None;
-                _tiles[gridIndex] = tile;
-            }
-            return _tiles[gridIndex];
+            if (_tiles == null || _tiles.Length == 0) return null;
+            return _tiles[BitmaskToIndex[Mathf.Clamp(bitmask, 0, 15)]];
         }
     }
 }

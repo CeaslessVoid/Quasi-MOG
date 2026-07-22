@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 namespace RoomGen
 {
@@ -11,8 +12,11 @@ namespace RoomGen
     {
         [SerializeField] private float orthographicSize = 12f;
         [SerializeField] private float panelWidth = 300f;
-        [SerializeField] private Texture2D wallAtlasTexture;
-        [SerializeField] private Texture2D floorTexture;
+
+        [Header("Wall Tiles - assign ONE of the two below")]
+        [SerializeField] private TileBase[] wallTiles = new TileBase[16];
+        [SerializeField] private Sprite[] wallSprites = new Sprite[16];
+        [SerializeField] private Sprite floorSprite;
 
         private void Awake()
         {
@@ -37,7 +41,7 @@ namespace RoomGen
 
             var builderGO = new GameObject("RoomBuilder");
             var visuals = builderGO.AddComponent<RoomBuilderVisuals>();
-            visuals.ConfigureTextures(wallAtlasTexture, floorTexture);
+            visuals.ConfigureTextures(wallTiles, wallSprites, floorSprite);
             var controller = builderGO.AddComponent<RoomBuilderController>();
             controller.Configure(cam, visuals);
         }

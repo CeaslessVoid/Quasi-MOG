@@ -8,24 +8,27 @@ namespace RoomGen
     /// camera at runtime/in builds, not just Scene-view gizmos. Uses Unity's Tilemap
     /// rather than a GameObject+SpriteRenderer per cell: a generated level can easily be
     /// thousands of cells across dozens of rooms, and Tilemap batches all of that into a
-    /// small number of chunked meshes instead of spawning one object per tile - this is
-    /// the "GPU-friendly" approach flagged as the goal all the way back when this project
-    /// started, and now that there's real art to put in it, this is the natural point to
-    /// actually build it that way rather than defer it further.
+    /// small number of chunked meshes instead of spawning one object per tile.
     ///
-    /// Doors currently render as an opening (no wall tile, floor shows through) rather
-    /// than dedicated door art - "ignore doors" per this texture pass. A door does NOT
-    /// count as wall-like for a neighboring wall's autotile bitmask - it's an opening, so
-    /// the wall next to it should show its exposed edge, not act like the wall continues
-    /// through the doorway.
+    /// Consumes already-correct assets rather than slicing any raw texture itself - assign
+    /// EITHER Wall Tiles (16 Tile assets, e.g. straight from an existing Tile Palette) OR
+    /// Wall Sprites (16 pre-cropped Sprite sub-assets) below, whichever you have. Same for
+    /// the floor - a single pre-made Sprite, not a raw texture.
+    ///
+    /// Doors currently render as an opening (no wall tile, floor shows through) rather than
+    /// dedicated door art - "ignore doors" per this texture pass. A door does NOT count as
+    /// wall-like for a neighboring wall's autotile bitmask - it's an opening, so the wall
+    /// next to it shows its exposed edge rather than acting like the wall continues through.
     /// </summary>
     public class LevelVisuals : MonoBehaviour
     {
-        [Header("Textures")]
-        [SerializeField] private Texture2D wallAtlasTexture;
-        [SerializeField] private float wallPixelsPerUnit = 100f;
-        [SerializeField] private Texture2D floorTexture;
-        [SerializeField] private float floorPixelsPerUnit = 100f;
+        [Header("Wall Tiles - assign ONE of the two below (16 entries, left-to-right/top-to-bottom off the reference image)")]
+        [SerializeField] private TileBase[] wallTiles = new TileBase[16];
+        [SerializeField] private Sprite[] wallSprites = new Sprite[16];
+
+        [Header("Floor")]
+        [Tooltip("Pre-made floor Sprite. Leave unassigned to keep the flat debug color.")]
+        [SerializeField] private Sprite floorSprite;
 
         [SerializeField] private float cellSize = 1f;
 
@@ -35,11 +38,12 @@ namespace RoomGen
         private Tilemap _wallTilemap;
         private bool _initialized;
 
-        /// <summary>Lets a bootstrap assign textures when creating this component in code. See RoomBuilderVisuals for why this needs to be idempotent.</summary>
-        public void Configure(Texture2D wallAtlas, Texture2D floor)
+        /// <summary>Lets a bootstrap assign assets when creating this component in code. Unity calls Awake() synchronously during AddComponent, before a caller has a chance to call this - so initialization is idempotent and safe to re-run here.</summary>
+        public void Configure(TileBase[] tiles, Sprite[] sprites, Sprite floor)
         {
-            wallAtlasTexture = wallAtlas;
-            floorTexture = floor;
+            wallTiles = tiles;
+            wallSprites = sprites;
+            floorSprite = floor;
             _initialized = false;
             EnsureInitialized();
         }
@@ -51,11 +55,10 @@ namespace RoomGen
             if (_initialized) return;
             _initialized = true;
 
-            _wallAtlas = new WallAtlas(wallAtlasTexture, 4, 4, wallPixelsPerUnit);
+            _wallAtlas = HasAny(wallTiles) ? new WallAtlas(wallTiles) : new WallAtlas(wallSprites);
 
-            if (floorTexture != null)
+            if (floorSprite != null)
             {
-                var floorSprite = Sprite.Create(floorTexture, new Rect(0, 0, floorTexture.width, floorTexture.height), new Vector2(0.5f, 0.5f), floorPixelsPerUnit);
                 _floorTile = ScriptableObject.CreateInstance<Tile>();
                 _floorTile.sprite = floorSprite;
                 _floorTile.colliderType = Tile.ColliderType.None;
@@ -80,6 +83,13 @@ namespace RoomGen
                 var wallRenderer = wallGO.AddComponent<TilemapRenderer>();
                 wallRenderer.sortingOrder = 5;
             }
+        }
+
+        private static bool HasAny<T>(T[] arr) where T : class
+        {
+            if (arr == null) return false;
+            foreach (var x in arr) if (x != null) return true;
+            return false;
         }
 
         public void Rebuild(LevelGrid grid)
@@ -109,9 +119,9 @@ namespace RoomGen
 
             if (data.floor != FloorType.Void && _floorTile != null)
                 _floorTilemap.SetTile(pos, _floorTile);
-            // Water and an unassigned floor texture still have no tile art yet - left
-            // blank rather than faked with a flat-color tile, since Tilemap doesn't do
-            // per-cell tint without a second tile variant.
+            // Water and an unassigned floor sprite still have no tile art yet - left blank
+            // rather than faked with a flat-color tile, since Tilemap doesn't do per-cell
+            // tint without a second tile variant.
 
             if (data.normal == NormalType.Wall)
             {
