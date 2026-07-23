@@ -4,11 +4,6 @@ using UnityEngine;
 
 namespace RoomGen
 {
-    /// <summary>
-    /// The room currently being edited in the builder. Plain data, no MonoBehaviour
-    /// dependency - so it's directly unit-testable, and JsonUtility can serialize it
-    /// as-is for save/load (this class doubles as the on-disk format).
-    /// </summary>
     [Serializable]
     public class RoomBuilderState
     {
