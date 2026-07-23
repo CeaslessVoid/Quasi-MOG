@@ -1,25 +1,16 @@
 using UnityEngine;
-using UnityEngine.Tilemaps;
 
 namespace RoomGen
 {
-    /// <summary>
-    /// Drop this on any empty GameObject in an otherwise empty scene and press Play - it
-    /// sets up a top-down orthographic camera and the builder itself, fully wired. No
-    /// manual scene assembly required.
-    /// </summary>
     public class RoomBuilderBootstrap : MonoBehaviour
     {
         [SerializeField] private float orthographicSize = 12f;
         [SerializeField] private float panelWidth = 300f;
 
-        [Header("Wall Tiles - assign ONE of the two below")]
-        [SerializeField] private TileBase[] wallTiles = new TileBase[16];
-        [SerializeField] private Sprite[] wallSprites = new Sprite[16];
-        [SerializeField] private Sprite floorSprite;
-
         private void Awake()
         {
+            GameManager.EnsureExists();
+
             var cam = Camera.main;
             if (cam == null)
             {
@@ -41,7 +32,6 @@ namespace RoomGen
 
             var builderGO = new GameObject("RoomBuilder");
             var visuals = builderGO.AddComponent<RoomBuilderVisuals>();
-            visuals.ConfigureTextures(wallTiles, wallSprites, floorSprite);
             var controller = builderGO.AddComponent<RoomBuilderController>();
             controller.Configure(cam, visuals);
         }

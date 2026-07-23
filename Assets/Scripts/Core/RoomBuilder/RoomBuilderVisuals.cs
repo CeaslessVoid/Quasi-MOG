@@ -3,28 +3,11 @@ using UnityEngine;
 
 namespace RoomGen
 {
-    /// <summary>
-    /// Renders a RoomBuilderState as colored quads (no art yet - this is the "debug draw"
-    /// layer). Pooled SpriteRenderers rather than IMGUI/Gizmos so it actually shows up at
-    /// runtime/in builds, not just the editor Scene view.
-    /// </summary>
-    public class RoomBuilderVisuals : MonoBehaviour
+    public class RoomBuilderVisuals : RoomVisualsBase
     {
-        [SerializeField] private float cellSize = 1f;
-
-        [Header("Wall Tiles - assign ONE of the two below (16 entries, left-to-right/top-to-bottom off the reference image)")]
-        [SerializeField] private UnityEngine.Tilemaps.TileBase[] wallTiles = new UnityEngine.Tilemaps.TileBase[16];
-        [SerializeField] private Sprite[] wallSprites = new Sprite[16];
-
-        [Header("Floor")]
-        [Tooltip("Pre-made floor Sprite. Leave unassigned to keep the flat debug color.")]
-        [SerializeField] private Sprite floorSprite;
-
-        private WallAtlas _wallAtlas;
         private Sprite _solidSprite;
         private Transform _root;
         private Transform _gridRoot;
-        private bool _initialized;
 
         private readonly Dictionary<Vector2Int, SpriteRenderer> _floorRenderers = new Dictionary<Vector2Int, SpriteRenderer>();
         private readonly Dictionary<Vector2Int, SpriteRenderer> _normalRenderers = new Dictionary<Vector2Int, SpriteRenderer>();
@@ -37,44 +20,11 @@ namespace RoomGen
             public SpriteRenderer body;
         }
 
-        public float CellSize => cellSize;
-
-        /// <summary>
-        /// Lets a bootstrap assign assets when creating this component in code. Unity
-        /// calls Awake() synchronously during AddComponent, before a caller has a chance to
-        /// call this - so initialization is idempotent and safe to re-run here.
-        /// </summary>
-        public void ConfigureTextures(UnityEngine.Tilemaps.TileBase[] tiles, Sprite[] sprites, Sprite floor)
+        protected override void OnInitialize()
         {
-            wallTiles = tiles;
-            wallSprites = sprites;
-            floorSprite = floor;
-            _initialized = false;
-            EnsureInitialized();
-        }
-
-        private void Awake() => EnsureInitialized();
-
-        private void EnsureInitialized()
-        {
-            if (_initialized) return;
-            _initialized = true;
-
             _solidSprite = CreateSolidSprite();
-            _wallAtlas = HasAny(wallTiles) ? new WallAtlas(wallTiles) : new WallAtlas(wallSprites);
-
-            if (_root == null)
-            {
-                _root = new GameObject("BuilderVisualsRoot").transform;
-                _root.SetParent(transform, false);
-            }
-        }
-
-        private static bool HasAny<T>(T[] arr) where T : class
-        {
-            if (arr == null) return false;
-            foreach (var x in arr) if (x != null) return true;
-            return false;
+            _root = new GameObject("BuilderVisualsRoot").transform;
+            _root.SetParent(transform, false);
         }
 
         private static Sprite CreateSolidSprite()
@@ -90,6 +40,7 @@ namespace RoomGen
 
         public void Rebuild(RoomBuilderState state)
         {
+            EnsureInitialized();
             Clear();
             _gridRoot = new GameObject("GridLines").transform;
             _gridRoot.SetParent(_root, false);
@@ -139,12 +90,6 @@ namespace RoomGen
             return sr;
         }
 
-        /// <summary>
-        /// Draws a white line grid over every cell boundary (width+1 vertical, height+1
-        /// horizontal), independent of what's painted, so the placeable area is always
-        /// visible without needing floor tiles laid down first. The outer boundary is
-        /// drawn brighter/thicker so the room's actual edge is unambiguous.
-        /// </summary>
         private void BuildGridLines(int width, int height)
         {
             float innerThickness = Mathf.Max(0.015f, cellSize * 0.02f);
@@ -182,12 +127,12 @@ namespace RoomGen
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = _solidSprite;
             sr.color = color;
-            sr.sortingOrder = 15; // above floor/normal/connector so bounds always read clearly
+            sr.sortingOrder = 15;
         }
 
         public void RefreshCell(RoomBuilderState state, int x, int y)
         {
-            if (!state.InBounds(x, y)) return; // painting a wall can trigger neighbor refreshes just outside the room
+            if (!state.InBounds(x, y)) return;
             var cell = new Vector2Int(x, y);
 
             var floor = state.GetFloorAt(x, y);
@@ -200,19 +145,19 @@ namespace RoomGen
             {
                 floorR.enabled = true;
                 floorR.sprite = _solidSprite;
-                floorR.color = new Color(0.2f, 0.4f, 0.9f); // no water texture yet - flat debug color
+                floorR.color = new Color(0.2f, 0.4f, 0.9f);
             }
-            else if (floorSprite != null)
+            else if (floorAsset != null && floorAsset.Sprite != null)
             {
                 floorR.enabled = true;
-                floorR.sprite = floorSprite;
+                floorR.sprite = floorAsset.Sprite;
                 floorR.color = Color.white;
             }
             else
             {
                 floorR.enabled = true;
                 floorR.sprite = _solidSprite;
-                floorR.color = new Color(0.55f, 0.55f, 0.55f); // no floor sprite assigned - flat debug color
+                floorR.color = new Color(0.55f, 0.55f, 0.55f);
             }
 
             var normal = state.GetNormalAt(x, y);
@@ -223,16 +168,14 @@ namespace RoomGen
                 bool e = IsWallLike(state, x + 1, y);
                 bool s = IsWallLike(state, x, y - 1);
                 bool w = IsWallLike(state, x - 1, y);
-                int bitmask = WallAtlas.ComputeBitmask(n, e, s, w);
+                int bitmask = ComputeBitmask(n, e, s, w);
 
                 normalR.enabled = true;
-                normalR.sprite = _wallAtlas.GetSprite(bitmask);
+                normalR.sprite = wallAsset != null ? wallAsset.GetSprite(bitmask) : null;
                 normalR.color = Color.white;
             }
             else if (normal == NormalType.Door)
             {
-                // No door art yet - a thin debug marker so it's visible while editing, but
-                // doesn't render as a solid wall (a door is an opening).
                 normalR.enabled = true;
                 normalR.sprite = _solidSprite;
                 normalR.color = new Color(0.65f, 0.4f, 0.1f, 0.5f);
@@ -261,12 +204,6 @@ namespace RoomGen
             }
         }
 
-        /// <summary>
-        /// Whether a neighbor cell counts as "wall-like" for autotiling purposes - only a
-        /// real Wall does. A Door is an opening, so a wall next to one should show its
-        /// exposed edge, not act like the wall continues through the doorway. A neighbor
-        /// outside the room's grid also doesn't count, for the same reason.
-        /// </summary>
         private static bool IsWallLike(RoomBuilderState state, int x, int y)
         {
             if (!state.InBounds(x, y)) return false;
@@ -282,7 +219,6 @@ namespace RoomGen
                 _propVisuals[cell] = pv;
             }
             pv.body.color = ColorForPropId(p.propId);
-            //pv.root.localRotation = Quaternion.Euler(0f, 0f, -p.baseRotationDeg);
         }
 
         private PropVisual CreatePropVisual(Vector2Int cell)
@@ -298,7 +234,6 @@ namespace RoomGen
             body.sprite = _solidSprite;
             body.sortingOrder = 10;
 
-            // Thin marker showing which way the prop currently faces (0deg = "up").
             var facingGO = new GameObject("Facing");
             facingGO.transform.SetParent(root, false);
             facingGO.transform.localPosition = new Vector3(0f, cellSize * 0.3f, 0f);

@@ -1,19 +1,31 @@
+using GameTexture;
 using UnityEngine;
 
-public class GameManager : MonoBehaviour
+namespace RoomGen
 {
-    public static GameManager Instance { get; private set; }
-
-    private void Awake()
+    public class GameManager : MonoBehaviour
     {
-        if (Instance != null && Instance != this)
+        public static GameManager Instance { get; private set; }
+
+        public GameTextureDatabase Assets;
+
+        public static GameManager EnsureExists()
         {
-            Destroy(gameObject);
-            return;
+            if (Instance != null) return Instance;
+            var go = new GameObject("GameManager");
+            return go.AddComponent<GameManager>();
         }
 
-        Instance = this;
+        private void Awake()
+        {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
 
-        DontDestroyOnLoad(gameObject);
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
     }
 }
