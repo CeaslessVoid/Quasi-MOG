@@ -1,11 +1,12 @@
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 namespace RoomGen
 {
     public class LevelViewerBootstrap : MonoBehaviour
     {
         [SerializeField] private float orthographicSize = 20f;
-
+        [SerializeField] private TileBase[] wallTiles = new TileBase[16];
         private void Start()
         {
             GameManager.EnsureExists();
