@@ -13,9 +13,20 @@ namespace RoomGen
     {
         public FloorType floor;
         public NormalType normal;
+        public string wallDef;
+        public string doorDef;
+        public string floorDef;
         public int ownerRoomId;
 
-        public static LevelCell Empty => new LevelCell { floor = FloorType.Void, normal = NormalType.Empty, ownerRoomId = -1 };
+        public static LevelCell Empty => new LevelCell
+        {
+            floor = FloorType.Void,
+            normal = NormalType.Empty,
+            wallDef = null,
+            doorDef = null,
+            floorDef = null,
+            ownerRoomId = -1
+        };
     }
 
     public class WorldConnectorRun

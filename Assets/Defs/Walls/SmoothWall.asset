@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf32eb64dfb24e447a5c94e7e4387308, type: 3}
+  m_Name: SmoothWall
+  m_EditorClassIdentifier: Assembly-CSharp::GameDefs.WallTextureElement
+  sprites:
+  - {fileID: -4208201591781012874, guid: f62bd06e1141bcb439ce3c721be707ba, type: 3}
+  - {fileID: 820671513, guid: f62bd06e1141bcb439ce3c721be707ba, type: 3}
+  - {fileID: -1417863533, guid: f62bd06e1141bcb439ce3c721be707ba, type: 3}
+  - {fileID: 925576461, guid: f62bd06e1141bcb439ce3c721be707ba, type: 3}
+  - {fileID: -1509990052, guid: f62bd06e1141bcb439ce3c721be707ba, type: 3}
+  - {fileID: -1519753811, guid: f62bd06e1141bcb439ce3c721be707ba, type: 3}
+  - {fileID: 558317495, guid: f62bd06e1141bcb439ce3c721be707ba, type: 3}
+  - {fileID: 829562428, guid: f62bd06e1141bcb439ce3c721be707ba, type: 3}
+  - {fileID: -143689502, guid: f62bd06e1141bcb439ce3c721be707ba, type: 3}
+  - {fileID: 299860182, guid: f62bd06e1141bcb439ce3c721be707ba, type: 3}
+  - {fileID: -2016843728, guid: f62bd06e1141bcb439ce3c721be707ba, type: 3}
+  - {fileID: 2136491824, guid: f62bd06e1141bcb439ce3c721be707ba, type: 3}
+  - {fileID: 87973671, guid: f62bd06e1141bcb439ce3c721be707ba, type: 3}
+  - {fileID: -90679338, guid: f62bd06e1141bcb439ce3c721be707ba, type: 3}
+  - {fileID: -755204056, guid: f62bd06e1141bcb439ce3c721be707ba, type: 3}
+  - {fileID: 1896898091, guid: f62bd06e1141bcb439ce3c721be707ba, type: 3}

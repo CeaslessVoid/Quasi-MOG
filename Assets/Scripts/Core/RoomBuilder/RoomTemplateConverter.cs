@@ -7,6 +7,7 @@ namespace RoomGen
     {
         public static RoomTemplate ToRoomTemplate(RoomBuilderState state)
         {
+            int count = state.width * state.height;
             var t = ScriptableObject.CreateInstance<RoomTemplate>();
             t.name = state.templateId;
             t.width = state.width;
@@ -16,7 +17,11 @@ namespace RoomGen
             t.floorLayer = (FloorType[])state.floorLayer.Clone();
             t.normalLayer = (NormalType[])state.normalLayer.Clone();
             t.connectorLayer = (ConnectorType[])state.connectorLayer.Clone();
-            t.ceilingLayer = new CeilingCell[state.width * state.height];
+            t.ceilingLayer = new CeilingCell[count];
+            t.wallDefLayer = CloneOrNew(state.wallDefLayer, count);
+            t.doorDefLayer = CloneOrNew(state.doorDefLayer, count);
+            t.floorDefLayer = CloneOrNew(state.floorDefLayer, count);
+            t.preferredDoorDef = state.preferredDoorDef;
             t.props = new List<PropPlacement>(state.props);
             t.desiredConnections = state.desiredConnections;
             t.extraConnectionChance = state.extraConnectionChance;
@@ -29,6 +34,7 @@ namespace RoomGen
 
         public static RoomBuilderState FromRoomTemplate(RoomTemplate t)
         {
+            int count = t.width * t.height;
             var s = new RoomBuilderState
             {
                 templateId = t.name,
@@ -39,6 +45,10 @@ namespace RoomGen
                 floorLayer = (FloorType[])t.floorLayer.Clone(),
                 normalLayer = (NormalType[])t.normalLayer.Clone(),
                 connectorLayer = (ConnectorType[])t.connectorLayer.Clone(),
+                wallDefLayer = CloneOrNew(t.wallDefLayer, count),
+                doorDefLayer = CloneOrNew(t.doorDefLayer, count),
+                floorDefLayer = CloneOrNew(t.floorDefLayer, count),
+                preferredDoorDef = t.preferredDoorDef,
                 props = new List<PropPlacement>(t.props),
                 desiredConnections = t.desiredConnections,
                 extraConnectionChance = t.extraConnectionChance,
@@ -48,6 +58,12 @@ namespace RoomGen
                 reconnectionDoubleChance = t.reconnectionDoubleChance
             };
             return s;
+        }
+
+        private static string[] CloneOrNew(string[] source, int count)
+        {
+            if (source != null && source.Length == count) return (string[])source.Clone();
+            return new string[count];
         }
     }
 }

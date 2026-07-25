@@ -18,6 +18,11 @@ namespace RoomGen
         public NormalType[] normalLayer;
         public ConnectorType[] connectorLayer;
 
+        public string[] wallDefLayer;
+        public string[] doorDefLayer;
+        public string[] floorDefLayer;
+        public string preferredDoorDef;
+
         public List<PropPlacement> props = new List<PropPlacement>();
 
         public int desiredConnections = 2;
@@ -35,7 +40,11 @@ namespace RoomGen
             floorLayer = new FloorType[count];
             normalLayer = new NormalType[count];
             connectorLayer = new ConnectorType[count];
+            wallDefLayer = new string[count];
+            doorDefLayer = new string[count];
+            floorDefLayer = new string[count];
             props = new List<PropPlacement>();
+            preferredDoorDef = null;
         }
 
         private int Index(int x, int y) => y * width + x;
@@ -46,20 +55,31 @@ namespace RoomGen
         public FloorType GetFloorAt(int x, int y) => floorLayer[Index(x, y)];
         public NormalType GetNormalAt(int x, int y) => normalLayer[Index(x, y)];
         public ConnectorType GetConnectorAt(int x, int y) => connectorLayer[Index(x, y)];
+        public string GetWallDefAt(int x, int y) => wallDefLayer[Index(x, y)];
+        public string GetDoorDefAt(int x, int y) => doorDefLayer[Index(x, y)];
+        public string GetFloorDefAt(int x, int y) => floorDefLayer[Index(x, y)];
 
-        public void SetFloorAt(int x, int y, FloorType v) { if (InBounds(x, y)) floorLayer[Index(x, y)] = v; }
-        public void SetNormalAt(int x, int y, NormalType v) { if (InBounds(x, y)) normalLayer[Index(x, y)] = v; }
+        public void SetFloorAt(int x, int y, FloorType v)
+        {
+            if (!InBounds(x, y)) return;
+            floorLayer[Index(x, y)] = v;
+            if (v == FloorType.Void) floorDefLayer[Index(x, y)] = null;
+        }
 
-        /// <summary>
-        /// Any Wall cell can be flagged as a connector while editing - whether it actually
-        /// faces open/exterior space (and so is usable by the generator) is judged later by
-        /// RoomTemplateUtility.IsConnectorEligible, once the room's walls are finished. This
-        /// keeps editing order-independent: you can flag a connector before you've painted
-        /// the walls around it.
-        /// </summary>
+        public void SetNormalAt(int x, int y, NormalType v)
+        {
+            if (!InBounds(x, y)) return;
+            normalLayer[Index(x, y)] = v;
+            if (v != NormalType.Wall) wallDefLayer[Index(x, y)] = null;
+            if (v != NormalType.Door) doorDefLayer[Index(x, y)] = null;
+        }
+
+        public void SetWallDefAt(int x, int y, string defName) { if (InBounds(x, y)) wallDefLayer[Index(x, y)] = defName; }
+        public void SetDoorDefAt(int x, int y, string defName) { if (InBounds(x, y)) doorDefLayer[Index(x, y)] = defName; }
+        public void SetFloorDefAt(int x, int y, string defName) { if (InBounds(x, y)) floorDefLayer[Index(x, y)] = defName; }
+
         public void SetConnectorAt(int x, int y, ConnectorType v) { if (InBounds(x, y) && GetNormalAt(x, y) == NormalType.Wall) connectorLayer[Index(x, y)] = v; }
 
-        /// <summary>At most one prop per cell in v1 - placing on an occupied cell replaces it.</summary>
         public void SetProp(PropPlacement p)
         {
             RemoveProp(p.cellX, p.cellY);

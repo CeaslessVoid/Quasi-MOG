@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
+using GameDefs;
 
 namespace RoomGen
 {
     public class RoomBuilderVisuals : RoomVisualsBase
     {
-        private Sprite _solidSprite;
         private Transform _root;
         private Transform _gridRoot;
 
@@ -22,20 +22,8 @@ namespace RoomGen
 
         protected override void OnInitialize()
         {
-            _solidSprite = CreateSolidSprite();
             _root = new GameObject("BuilderVisualsRoot").transform;
             _root.SetParent(transform, false);
-        }
-
-        private static Sprite CreateSolidSprite()
-        {
-            var tex = new Texture2D(4, 4);
-            var pixels = new Color[16];
-            for (int i = 0; i < 16; i++) pixels[i] = Color.white;
-            tex.SetPixels(pixels);
-            tex.Apply();
-            tex.filterMode = FilterMode.Point;
-            return Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4f);
         }
 
         public void Rebuild(RoomBuilderState state)
@@ -84,7 +72,7 @@ namespace RoomGen
             go.transform.localPosition = new Vector3(cell.x * cellSize, cell.y * cellSize, 0f);
             go.transform.localScale = Vector3.one * cellSize;
             var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = _solidSprite;
+            sr.sprite = DefVisualUtility.SolidSprite;
             sr.sortingOrder = sortingOrder;
             sr.enabled = false;
             return sr;
@@ -125,7 +113,7 @@ namespace RoomGen
             go.transform.localPosition = localPos;
             go.transform.localScale = scale;
             var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = _solidSprite;
+            sr.sprite = DefVisualUtility.SolidSprite;
             sr.color = color;
             sr.sortingOrder = 15;
         }
@@ -144,20 +132,23 @@ namespace RoomGen
             else if (floor == FloorType.Water)
             {
                 floorR.enabled = true;
-                floorR.sprite = _solidSprite;
+                floorR.sprite = DefVisualUtility.SolidSprite;
                 floorR.color = new Color(0.2f, 0.4f, 0.9f);
-            }
-            else if (floorAsset != null && floorAsset.Sprite != null)
-            {
-                floorR.enabled = true;
-                floorR.sprite = floorAsset.Sprite;
-                floorR.color = Color.white;
             }
             else
             {
+                var floorDef = DefDatabase<FloorDef>.Get(state.GetFloorDefAt(x, y));
                 floorR.enabled = true;
-                floorR.sprite = _solidSprite;
-                floorR.color = new Color(0.55f, 0.55f, 0.55f);
+                if (floorDef != null && floorDef.HasTexture)
+                {
+                    floorR.sprite = floorDef.Sprite;
+                    floorR.color = floorDef.TintColor;
+                }
+                else
+                {
+                    floorR.sprite = DefVisualUtility.MissingSprite;
+                    floorR.color = Color.white;
+                }
             }
 
             var normal = state.GetNormalAt(x, y);
@@ -170,15 +161,33 @@ namespace RoomGen
                 bool w = IsWallLike(state, x - 1, y);
                 int bitmask = ComputeBitmask(n, e, s, w);
 
+                var wallDef = DefDatabase<WallDef>.Get(state.GetWallDefAt(x, y));
                 normalR.enabled = true;
-                normalR.sprite = wallAsset != null ? wallAsset.GetSprite(bitmask) : null;
-                normalR.color = Color.white;
+                if (wallDef != null && wallDef.HasTexture)
+                {
+                    normalR.sprite = wallDef.GetSprite(bitmask);
+                    normalR.color = wallDef.TintColor;
+                }
+                else
+                {
+                    normalR.sprite = DefVisualUtility.MissingSprite;
+                    normalR.color = Color.white;
+                }
             }
             else if (normal == NormalType.Door)
             {
+                var doorDef = DefDatabase<DoorDef>.Get(state.GetDoorDefAt(x, y));
                 normalR.enabled = true;
-                normalR.sprite = _solidSprite;
-                normalR.color = new Color(0.65f, 0.4f, 0.1f, 0.5f);
+                if (doorDef != null && doorDef.HasTexture)
+                {
+                    normalR.sprite = doorDef.ClosedSprite;
+                    normalR.color = doorDef.TintColor;
+                }
+                else
+                {
+                    normalR.sprite = DefVisualUtility.MissingSprite;
+                    normalR.color = new Color(0.65f, 0.4f, 0.1f, 1f);
+                }
             }
             else
             {
@@ -194,7 +203,7 @@ namespace RoomGen
             else
             {
                 connR.enabled = true;
-                connR.sprite = _solidSprite;
+                connR.sprite = DefVisualUtility.SolidSprite;
                 connR.color = conn switch
                 {
                     ConnectorType.Restricted => new Color(1f, 0.3f, 0.1f, 0.55f),
@@ -231,7 +240,7 @@ namespace RoomGen
             bodyGO.transform.SetParent(root, false);
             bodyGO.transform.localScale = Vector3.one * cellSize * 0.5f;
             var body = bodyGO.AddComponent<SpriteRenderer>();
-            body.sprite = _solidSprite;
+            body.sprite = DefVisualUtility.SolidSprite;
             body.sortingOrder = 10;
 
             var facingGO = new GameObject("Facing");
@@ -239,7 +248,7 @@ namespace RoomGen
             facingGO.transform.localPosition = new Vector3(0f, cellSize * 0.3f, 0f);
             facingGO.transform.localScale = new Vector3(cellSize * 0.12f, cellSize * 0.35f, 1f);
             var facing = facingGO.AddComponent<SpriteRenderer>();
-            facing.sprite = _solidSprite;
+            facing.sprite = DefVisualUtility.SolidSprite;
             facing.color = Color.white;
             facing.sortingOrder = 11;
 

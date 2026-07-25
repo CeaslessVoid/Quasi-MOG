@@ -389,41 +389,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RoomGen.LevelViewerBootstrap
   orthographicSize: 20
-  wallTiles:
-  - {fileID: 11400000, guid: 9ce0f93698330a946826125f36e9856a, type: 2}
-  - {fileID: 11400000, guid: e2a37b01bc3b10e4782051ca5ee94377, type: 2}
-  - {fileID: 11400000, guid: 899f5593360a8cf4a84805a5d3e0ac5c, type: 2}
-  - {fileID: 11400000, guid: fcf64c3f9024d1c45a21361107e5b933, type: 2}
-  - {fileID: 11400000, guid: 57cf656794ea40942a9789f2a4ca961f, type: 2}
-  - {fileID: 11400000, guid: b84718e039b7d1443b3747923adec0a9, type: 2}
-  - {fileID: 11400000, guid: 5675d7c55fbef7a4da47b7d9a1634457, type: 2}
-  - {fileID: 11400000, guid: 26d910bd3c190c84da4aa3f1fbe6a9d8, type: 2}
-  - {fileID: 11400000, guid: 51e1c47588f53f449a68da7eff9e3b9d, type: 2}
-  - {fileID: 11400000, guid: 72bcc17bd38f8b44d899473bc8d66da0, type: 2}
-  - {fileID: 11400000, guid: be3b2a0d749f05a408b69ce692de45be, type: 2}
-  - {fileID: 11400000, guid: 6868be82b009c9b4e8ac85788b4401c9, type: 2}
-  - {fileID: 11400000, guid: 5d8eb551ad04c0b42b5598ee97982ec3, type: 2}
-  - {fileID: 11400000, guid: 61a4af4a69f4c72489589badf8affa6d, type: 2}
-  - {fileID: 11400000, guid: 33d15a595ab638a459022bb39908d76f, type: 2}
-  - {fileID: 11400000, guid: 1727554abf427d24c82ee246045df48a, type: 2}
-  wallSprites:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  floorSprite: {fileID: -133107270887145440, guid: 7fe48ce7083deac4098a05603bc4e8d0, type: 3}
 --- !u!4 &634982911
 Transform:
   m_ObjectHideFlags: 0
@@ -835,6 +800,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 286c0b46d5d7fbf42a84060fb95afa56, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
+  Defs: {fileID: 11400000, guid: d3fd211eff1652949a7410d255cdfe89, type: 2}
 --- !u!4 &1736498592
 Transform:
   m_ObjectHideFlags: 0

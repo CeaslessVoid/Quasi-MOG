@@ -144,7 +144,7 @@ Transform:
   m_GameObject: {fileID: 325509943}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.11772, y: 0.90975, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -228,8 +228,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 66504d6f5d02ec14ab1ddc09eb69d06c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RoomGen.RoomBuilderVisuals
-  wallId: SmoothWall
-  floorId: BasicFloor
   cellSize: 1
 --- !u!4 &972222635
 Transform:
@@ -420,7 +418,7 @@ Transform:
   m_GameObject: {fileID: 1217225151}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.11772, y: -0.90975, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -611,7 +609,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 286c0b46d5d7fbf42a84060fb95afa56, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  Assets: {fileID: 0}
+  Defs: {fileID: 11400000, guid: d3fd211eff1652949a7410d255cdfe89, type: 2}
 --- !u!4 &1430554081
 Transform:
   m_ObjectHideFlags: 0
@@ -633,6 +631,6 @@ SceneRoots:
   m_Roots:
   - {fileID: 1118581313}
   - {fileID: 325509944}
-  - {fileID: 941354202}
   - {fileID: 1430554081}
+  - {fileID: 941354202}
   - {fileID: 972222635}

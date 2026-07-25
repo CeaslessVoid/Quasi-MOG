@@ -18,23 +18,27 @@ namespace RoomGen
         [SerializeField] private int minCorridors = 3;
         [Tooltip("Boosts a corridor candidate's weight for ANY connector while the level still has fewer than minCorridors corridors placed - guarantees the minimum gets reached.")]
         [SerializeField] private float corridorWeightMultiplierBeforeMinMet = 2.5f;
-        [Tooltip("Multiplies a corridor candidate's weight for ANY connector once minCorridors has already been reached - keep this under 1 so corridors get rarer (not just neutral) once the minimum is satisfied.")]
+        [Tooltip("Multiplies a corridor candidate's weight for ANY connector once minCorridors has already been reached - keep this under 1 so corridors get rarer once the minimum is satisfied.")]
         [SerializeField] private float corridorWeightMultiplierAfterMinMet = 0.35f;
-        [Tooltip("On top of the above, multiplies a corridor candidate's weight specifically when the room it would attach to is ALSO a corridor - lower means corridors are less likely to chain directly into each other. This dampener used to get canceled out during the early 'need more corridors' phase (see PickWeighted) - that's fixed now, so this value applies consistently throughout generation, not just after minCorridors is met. When two corridors DO connect (primary or reconnection), that connection always forces a double door regardless of either side's connector type - see RoomGenerator.Generate.")]
+        [Tooltip("On top of the above, multiplies a corridor candidate's weight specifically when the room it would attach to is ALSO a corridor. When two corridors DO connect, that connection always forces a double door regardless of either side's connector type.")]
         [SerializeField] private float corridorToCorridorWeightMultiplier = 0.05f;
-        [Tooltip("Hard cap: once a corridor chain reaches this many corridors in a row, further corridor-to-corridor growth off the END of that chain is blocked outright (weight forced to zero) rather than just made unlikely. 1 means a corridor may attach to one other corridor, but that second corridor can never chain into a third.")]
+        [Tooltip("Hard cap: once a corridor chain reaches this many corridors in a row, further corridor-to-corridor growth off the END of that chain is blocked outright.")]
         [SerializeField] private int maxConsecutiveCorridors = 1;
         [SerializeField] private int maxPlacementAttemptsPerConnector = 12;
-        [Tooltip("Once roomsPlaced reaches desiredRoomCount, each further connect-roll's chance gets multiplied by this (compounding) instead of generation stopping outright - growth tapers off naturally as rooms finish wanting more connections, rather than getting cut off mid-shape with a wall of abrupt dead ends. desiredRoomCount is a target to wind down around, not a hard cap - the level WILL go over it.")]
+        [Tooltip("Once roomsPlaced reaches desiredRoomCount, each further connect-roll's chance gets multiplied by this (compounding) instead of generation stopping outright.")]
         [Range(0f, 1f)]
         [SerializeField] private float overflowGrowthDamping = 0.6f;
+
+        [Header("Doors")]
+        [Tooltip("DoorDef used when a connection doesn't specify a preferred door def on either room template.")]
+        [SerializeField] private string defaultDoorDefName = "BasicDoor";
 
         [Header("Random")]
         [SerializeField] private bool useFixedSeed = false;
         [SerializeField] private int seed = 12345;
 
         [Header("Connectivity Safety Net")]
-        [Tooltip("If true, any pair of placed rooms whose connector-flagged cells end up coinciding (touching walls) but have zero doors between them get one added automatically after generation. Without this, rooms can end up merged wall-to-wall with no way through - which happens whenever two branches of generation grow toward each other and happen to touch, not just via the deliberate parent/child connections the main loop makes.")]
+        [Tooltip("If true, any pair of placed rooms whose connector-flagged cells end up coinciding but have zero doors between them get one added automatically after generation.")]
         [SerializeField] private bool guaranteeDoorsOnConnectorOverlap = true;
 
         [Header("Debug Draw")]
@@ -116,7 +120,8 @@ namespace RoomGen
                 if (newIsCorridor) corridorsPlaced++;
 
                 bool involvesCorridor = ownerRoom.template.HasTag("corridor") || newIsCorridor;
-                _grid.ResolveConnection(placement.Value.overlapCells, targetRun.type, placement.Value.candidateRunType, _rng,
+                string doorDef = PickDoorDef(ownerRoom.template, placement.Value.template);
+                _grid.ResolveConnection(placement.Value.overlapCells, targetRun.type, placement.Value.candidateRunType, _rng, doorDef,
                     forceDoubleOverride: involvesCorridor);
 
                 targetRun.state = ConnectorState.Connected;
@@ -146,25 +151,23 @@ namespace RoomGen
             Debug.Log($"RoomGenerator: generated {roomsPlaced} room(s) (target was {desiredRoomCount}).");
         }
 
+        private string PickDoorDef(RoomTemplate a, RoomTemplate b)
+        {
+            if (!string.IsNullOrEmpty(a.preferredDoorDef)) return a.preferredDoorDef;
+            if (!string.IsNullOrEmpty(b.preferredDoorDef)) return b.preferredDoorDef;
+            return defaultDoorDefName;
+        }
+
         private List<RoomTemplate> BuildTemplatePool()
         {
             if (!autoLoadFromRoomLibrary) return roomTemplates;
 
             var pool = RoomLibraryLoader.LoadAll();
             if (roomTemplates != null && roomTemplates.Count > 0)
-                pool.AddRange(roomTemplates); // manually-assigned templates (e.g. a test bootstrap) still work alongside the library
+                pool.AddRange(roomTemplates);
             return pool;
         }
 
-        /// <summary>
-        /// After the main growth loop, every room gets one independent chance-roll (its own
-        /// reconnectionChance) per room it's already connected to, to try opening a second
-        /// door to that same neighbor using leftover connector space. Each room's roll uses
-        /// its own chance, so this is evaluated once per (room, connectedNeighbor) pair in
-        /// each direction - a room with a high reconnectionChance will reach out to its
-        /// neighbors more often than one with a low chance, independent of what its
-        /// neighbors are configured with.
-        /// </summary>
         private void PerformReconnectionPass()
         {
             var pairs = new List<(PlacedRoom room, int neighborId)>();
@@ -207,17 +210,6 @@ namespace RoomGen
             return segments;
         }
 
-        /// <summary>
-        /// Two rooms can end up sharing wall cells purely as a side effect of geometry -
-        /// two branches of generation growing toward each other and happening to touch -
-        /// without ever going through the deliberate parent/child match in the main loop.
-        /// If that touch happens to land on cells BOTH rooms flagged as connectors, that
-        /// reads as an intentional connection that never got resolved into a door. This
-        /// pass finds every such pair (zero doors between them despite overlapping
-        /// connector cells) and guarantees exactly one door - unlike the reconnection pass,
-        /// this isn't chance-based, since leaving two rooms silently wall-merged with no way
-        /// through is a correctness problem, not a variety knob.
-        /// </summary>
         private void ResolveOrphanedConnectorOverlaps()
         {
             var rooms = _grid.PlacedRooms;
@@ -231,18 +223,11 @@ namespace RoomGen
                     bool alreadyConnected = a.connectorRuns.Any(r => r.state == ConnectorState.Connected && r.connectedToRoomId == b.id);
                     if (alreadyConnected) continue;
 
-                    TryResolveConnection(a, b, chance: null); // null = guaranteed, not rolled
+                    TryResolveConnection(a, b, chance: null);
                 }
             }
         }
 
-        /// <summary>
-        /// Shared implementation for both the orphan-resolution pass (chance == null,
-        /// always connects if eligible space exists) and reconnections between already
-        /// - connected pairs (chance != null, rolled per call site). Finds the first
-        /// eligible segment of overlapping connector cells between two rooms - still plain
-        /// Wall, not touching an existing door anywhere - and resolves it into a door.
-        /// </summary>
         private bool TryResolveConnection(PlacedRoom a, PlacedRoom b, float? chance)
         {
             if (chance.HasValue && _rng.NextDouble() > chance.Value) return false;
@@ -252,9 +237,6 @@ namespace RoomGen
 
             foreach (var runA in a.connectorRuns)
             {
-                // Corridor-to-corridor may ONLY happen through a run BOTH sides flagged
-                // AlwaysDouble - their long Normal/Restricted sides are for connecting to
-                // rooms, not chaining hallway-to-hallway.
                 if (bothCorridors && runA.type != ConnectorType.AlwaysDouble) continue;
 
                 foreach (var runB in b.connectorRuns)
@@ -275,7 +257,8 @@ namespace RoomGen
                         {
                             if (subSegment.Count == 0) continue;
 
-                            _grid.ResolveConnection(subSegment, runA.type, runB.type, _rng,
+                            string doorDef = PickDoorDef(a.template, b.template);
+                            _grid.ResolveConnection(subSegment, runA.type, runB.type, _rng, doorDef,
                                 overrideDoubleChance: chance.HasValue ? a.template.reconnectionDoubleChance : (float?)null,
                                 forceDoubleOverride: involvesCorridor);
 
@@ -291,19 +274,6 @@ namespace RoomGen
             return false;
         }
 
-        /// <summary>
-        /// A corridor's AlwaysDouble connectors are its "this is meant to lead somewhere
-        /// important" ends. If one of them failed to connect during main growth (sealed,
-        /// not connected) but there's actually still room to fit something there, that's a
-        /// dead end that shouldn't exist - the main loop can fail to find a placement for
-        /// reasons that have nothing to do with "there's no space" (a bad chance roll, or
-        /// exhausting its attempt budget on a crowded pool). This pass gives every such
-        /// sealed AlwaysDouble end one more, corridor-excluded try: if a normal room can fit
-        /// there, place it as a terminal room (its OTHER connectors get sealed immediately,
-        /// not grown further - this is a dead-end patch, not a new growth branch). Not
-        /// every one of these will find space, and that's fine - some corridor ends are
-        /// just surrounded by already-placed rooms with nothing left to attach.
-        /// </summary>
         private void ReviveDeadCorridorEnds()
         {
             var deadEnds = _grid.PlacedRooms
@@ -315,13 +285,14 @@ namespace RoomGen
             foreach (var (room, run) in deadEnds)
             {
                 var placement = TryFindPlacement(run, preferCorridor: false, room.corridorChainDepth, excludeCorridorCandidates: true);
-                if (placement == null) continue; // genuinely no space here - stays a dead end
+                if (placement == null) continue;
 
                 var newRoom = _grid.Stamp(placement.Value.template, placement.Value.origin, placement.Value.rotationDeg);
-                newRoom.corridorChainDepth = 0; // never a corridor - excludeCorridorCandidates guarantees this
+                newRoom.corridorChainDepth = 0;
 
-                _grid.ResolveConnection(placement.Value.overlapCells, run.type, placement.Value.candidateRunType, _rng,
-                    forceDoubleOverride: true); // AlwaysDouble end - always try for the double it was built for
+                string doorDef = PickDoorDef(room.template, placement.Value.template);
+                _grid.ResolveConnection(placement.Value.overlapCells, run.type, placement.Value.candidateRunType, _rng, doorDef,
+                    forceDoubleOverride: true);
 
                 run.state = ConnectorState.Connected;
                 run.connectedToRoomId = newRoom.id;
@@ -337,7 +308,7 @@ namespace RoomGen
                     }
                     else
                     {
-                        SealRun(newRun); // terminal room - the safety-net/reconnection passes can still pick up further coincidental connections for it
+                        SealRun(newRun);
                     }
                 }
             }
@@ -370,10 +341,6 @@ namespace RoomGen
         {
             bool ownerIsCorridor = ownerCorridorChainDepth > 0;
 
-            // Corridor-to-corridor may ONLY happen through a run BOTH sides flagged
-            // AlwaysDouble. If the owner is a corridor and this particular target run isn't
-            // AlwaysDouble, don't even consider corridor candidates here - only normal
-            // rooms remain eligible for this connector.
             bool corridorCandidatesAllowed = !excludeCorridorCandidates && (!ownerIsCorridor || targetRun.type == ConnectorType.AlwaysDouble);
 
             var candidates = _activePool.Where(t => !t.HasTag("spawn")).ToList();
@@ -458,15 +425,10 @@ namespace RoomGen
                 {
                     bool ownerIsCorridor = ownerCorridorChainDepth > 0;
 
-                    // The "we still need more corridors" boost is meant to recruit corridors
-                    // off of NORMAL rooms - it should never also boost a corridor picking
-                    // another corridor, or it cancels out the dampener below and corridors
-                    // keep chaining right through the "early phase" of generation.
                     w *= (preferCorridor && !ownerIsCorridor) ? corridorWeightMultiplierBeforeMinMet : corridorWeightMultiplierAfterMinMet;
 
                     if (ownerIsCorridor)
                     {
-                        // Owner is itself a corridor - this would extend the chain by one.
                         w = ownerCorridorChainDepth >= maxConsecutiveCorridors ? 0f : w * corridorToCorridorWeightMultiplier;
                     }
                 }

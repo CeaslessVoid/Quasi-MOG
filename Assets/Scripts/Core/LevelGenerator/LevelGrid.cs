@@ -51,13 +51,25 @@ namespace RoomGen
                     {
                         floor = t.GetFloor(x, y),
                         normal = t.GetNormal(x, y),
+                        wallDef = t.GetWallDef(x, y),
+                        doorDef = t.GetDoorDef(x, y),
+                        floorDef = t.GetFloorDef(x, y),
                         ownerRoomId = room.id
                     };
 
                     if (_cells.TryGetValue(world, out var existingCell))
                     {
-                        if (cell.floor == FloorType.Void) cell.floor = existingCell.floor;
-                        if (cell.normal == NormalType.Empty) cell.normal = existingCell.normal;
+                        if (cell.floor == FloorType.Void)
+                        {
+                            cell.floor = existingCell.floor;
+                            cell.floorDef = existingCell.floorDef;
+                        }
+                        if (cell.normal == NormalType.Empty)
+                        {
+                            cell.normal = existingCell.normal;
+                            cell.wallDef = existingCell.wallDef;
+                            cell.doorDef = existingCell.doorDef;
+                        }
                         cell.ownerRoomId = existingCell.ownerRoomId;
                     }
 
@@ -89,13 +101,19 @@ namespace RoomGen
             return room;
         }
 
-        public void SetNormal(Vector2Int pos, NormalType type)
+        public void SetNormal(Vector2Int pos, NormalType type, string defName = null)
         {
             var cell = GetCell(pos);
             cell.normal = type;
+            if (defName != null)
+            {
+                if (type == NormalType.Wall) cell.wallDef = defName;
+                else if (type == NormalType.Door) cell.doorDef = defName;
+            }
             _cells[pos] = cell;
         }
-        public DoorSize ResolveConnection(List<Vector2Int> overlapCellsInOrder, ConnectorType typeA, ConnectorType typeB, System.Random rng, float? overrideDoubleChance = null, bool forceDoubleOverride = false)
+
+        public DoorSize ResolveConnection(List<Vector2Int> overlapCellsInOrder, ConnectorType typeA, ConnectorType typeB, System.Random rng, string doorDefName, float? overrideDoubleChance = null, bool forceDoubleOverride = false)
         {
             foreach (var c in overlapCellsInOrder) SetNormal(c, NormalType.Wall);
 
@@ -104,7 +122,7 @@ namespace RoomGen
 
             if (overlapCellsInOrder.Count == 1)
             {
-                SetNormal(overlapCellsInOrder[0], NormalType.Door);
+                SetNormal(overlapCellsInOrder[0], NormalType.Door, doorDefName);
                 return DoorSize.Single1x1;
             }
 
@@ -113,11 +131,11 @@ namespace RoomGen
                 bool wantsDoubleHere = forceDouble || (!forceSingle && (!overrideDoubleChance.HasValue || rng.NextDouble() < overrideDoubleChance.Value));
                 if (wantsDoubleHere)
                 {
-                    SetNormal(overlapCellsInOrder[0], NormalType.Door);
-                    SetNormal(overlapCellsInOrder[1], NormalType.Door);
+                    SetNormal(overlapCellsInOrder[0], NormalType.Door, doorDefName);
+                    SetNormal(overlapCellsInOrder[1], NormalType.Door, doorDefName);
                     return DoorSize.Double2x1;
                 }
-                SetNormal(overlapCellsInOrder[rng.Next(0, 2)], NormalType.Door);
+                SetNormal(overlapCellsInOrder[rng.Next(0, 2)], NormalType.Door, doorDefName);
                 return DoorSize.Single1x1;
             }
 
@@ -133,13 +151,13 @@ namespace RoomGen
             if (wantsDouble && canDouble)
             {
                 int startIndex = rng.Next(0, eligible.Count - 1);
-                SetNormal(eligible[startIndex], NormalType.Door);
-                SetNormal(eligible[startIndex + 1], NormalType.Door);
+                SetNormal(eligible[startIndex], NormalType.Door, doorDefName);
+                SetNormal(eligible[startIndex + 1], NormalType.Door, doorDefName);
                 return DoorSize.Double2x1;
             }
 
             int index = rng.Next(0, eligible.Count);
-            SetNormal(eligible[index], NormalType.Door);
+            SetNormal(eligible[index], NormalType.Door, doorDefName);
             return DoorSize.Single1x1;
         }
 

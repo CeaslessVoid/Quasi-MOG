@@ -1,19 +1,13 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using GameDefs;
 using static RoomGen.PropPlacement;
 
 namespace RoomGen
 {
     public enum BuilderTool { Floor, Normal, Connector, Prop }
 
-    /// <summary>
-    /// The in-game room builder. Left-drag paints the current tool's brush, right-drag
-    /// erases (sets back to the layer's default value). No sprites - cells render as flat
-    /// colored quads via RoomBuilderVisuals. Panel on the left is plain IMGUI (OnGUI) so
-    /// there's no scene/prefab setup required - just drop this + RoomBuilderVisuals on a
-    /// GameObject (or use RoomBuilderBootstrap to do that for you) and press Play.
-    /// </summary>
     [RequireComponent(typeof(RoomBuilderVisuals))]
     public class RoomBuilderController : MonoBehaviour
     {
@@ -24,9 +18,13 @@ namespace RoomGen
         private RoomBuilderState _state;
         private BuilderTool _tool = BuilderTool.Floor;
 
-        private FloorType _floorBrush = FloorType.Floor;
-        private NormalType _normalBrush = NormalType.Wall;
+        private FloorType _floorBrushType = FloorType.Floor;
+        private NormalType _normalBrushType = NormalType.Wall;
         private ConnectorType _connectorBrush = ConnectorType.Normal;
+
+        private string _wallDefBrush;
+        private string _doorDefBrush;
+        private string _floorDefBrush;
 
         private string _currentPropId = "prop_crate";
         private PropRotation _currentPropRotation = PropRotation.North;
@@ -35,7 +33,6 @@ namespace RoomGen
         private Vector2Int? _lastPaintCellLeft;
         private Vector2Int? _lastPaintCellRight;
 
-        // IMGUI field buffers
         private string _newWidthField = "5";
         private string _newHeightField = "5";
         private string _templateIdField = "NewRoom";
@@ -57,6 +54,10 @@ namespace RoomGen
             if (visuals == null) visuals = GetComponent<RoomBuilderVisuals>();
             if (targetCamera == null) targetCamera = Camera.main;
             RefreshFileList();
+
+            if (DefDatabase<WallDef>.All.Count > 0) _wallDefBrush = DefDatabase<WallDef>.All[0].DefName;
+            if (DefDatabase<DoorDef>.All.Count > 0) _doorDefBrush = DefDatabase<DoorDef>.All[0].DefName;
+            if (DefDatabase<FloorDef>.All.Count > 0) _floorDefBrush = DefDatabase<FloorDef>.All[0].DefName;
         }
 
         private bool IsTypingInField => GUIUtility.keyboardControl != 0;
@@ -64,7 +65,7 @@ namespace RoomGen
         private void Update()
         {
             if (_state == null || targetCamera == null) return;
-            if (Input.mousePosition.x < panelWidth) return; // pointer is over the tool panel
+            if (Input.mousePosition.x < panelWidth) return;
 
             var mouseWorld = targetCamera.ScreenToWorldPoint(Input.mousePosition);
             mouseWorld.z = 0f;
@@ -124,19 +125,36 @@ namespace RoomGen
             switch (_tool)
             {
                 case BuilderTool.Floor:
-                    _state.SetFloorAt(x, y, erase ? FloorType.Void : _floorBrush);
+                    if (erase)
+                    {
+                        _state.SetFloorAt(x, y, FloorType.Void);
+                    }
+                    else
+                    {
+                        _state.SetFloorAt(x, y, _floorBrushType);
+                        if (_floorBrushType == FloorType.Floor) _state.SetFloorDefAt(x, y, _floorDefBrush);
+                    }
                     visuals.RefreshCell(_state, x, y);
                     break;
+
                 case BuilderTool.Normal:
-                    _state.SetNormalAt(x, y, erase ? NormalType.Empty : _normalBrush);
-                    // A wall's sprite depends on its neighbors, so painting/erasing one
-                    // cell can change up to 4 neighboring cells' autotile sprite too.
+                    if (erase)
+                    {
+                        _state.SetNormalAt(x, y, NormalType.Empty);
+                    }
+                    else
+                    {
+                        _state.SetNormalAt(x, y, _normalBrushType);
+                        if (_normalBrushType == NormalType.Wall) _state.SetWallDefAt(x, y, _wallDefBrush);
+                        else if (_normalBrushType == NormalType.Door) _state.SetDoorDefAt(x, y, _doorDefBrush);
+                    }
                     visuals.RefreshCell(_state, x, y);
                     visuals.RefreshCell(_state, x + 1, y);
                     visuals.RefreshCell(_state, x - 1, y);
                     visuals.RefreshCell(_state, x, y + 1);
                     visuals.RefreshCell(_state, x, y - 1);
                     break;
+
                 case BuilderTool.Connector:
                     if (_state.GetNormalAt(x, y) != NormalType.Wall)
                     {
@@ -184,12 +202,10 @@ namespace RoomGen
             if (!existing.HasValue) return;
 
             var p = existing.Value;
-            p.rotation = p.rotation == PropRotation.West ? (p.rotation + 1) : p.rotation = 0;
+            p.rotation = p.rotation == PropRotation.West ? PropRotation.North : p.rotation + 1;
             _state.SetProp(p);
             visuals.RefreshProp(p);
         }
-
-        // ---------- Room lifecycle ----------
 
         private void CreateNewRoom()
         {
@@ -227,8 +243,6 @@ namespace RoomGen
 
         private static int ParseIntOrDefault(string s, int fallback) => int.TryParse(s, out int v) ? Mathf.Max(3, v) : fallback;
 
-        // ---------- OnGUI ----------
-
         private void OnGUI()
         {
             GUILayout.BeginArea(new Rect(0, 0, panelWidth, Screen.height), GUI.skin.box);
@@ -242,6 +256,8 @@ namespace RoomGen
             DrawSaveLoadSection();
             GUILayout.Space(8);
             DrawTagSection();
+            GUILayout.Space(8);
+            DrawRoomDefaultsSection();
             GUILayout.Space(8);
             DrawWeightsSection();
             GUILayout.Space(8);
@@ -284,6 +300,7 @@ namespace RoomGen
                     LoadRoom(file);
             }
             GUILayout.EndScrollView();
+
         }
 
         private void DrawTagSection()
@@ -322,6 +339,14 @@ namespace RoomGen
                 if (GUILayout.Button("x", GUILayout.Width(22))) tags.RemoveAt(i);
                 GUILayout.EndHorizontal();
             }
+        }
+
+        private void DrawRoomDefaultsSection()
+        {
+            if (_state == null) return;
+            GUILayout.Label("Preferred Door Def (used for generated connections)");
+            DrawDefBrushButtons(DefDatabase<DoorDef>.All, _state.preferredDoorDef, v => _state.preferredDoorDef = v);
+            if (GUILayout.Button("Clear (use generator default)")) _state.preferredDoorDef = null;
         }
 
         private void DrawWeightsSection()
@@ -367,12 +392,27 @@ namespace RoomGen
             switch (_tool)
             {
                 case BuilderTool.Floor:
-                    GUILayout.Label("Floor Brush");
-                    DrawEnumBrushButtons(new[] { FloorType.Void, FloorType.Floor, FloorType.Water }, _floorBrush, v => _floorBrush = v);
+                    GUILayout.Label("Floor Type");
+                    DrawEnumBrushButtons(new[] { FloorType.Void, FloorType.Floor, FloorType.Water }, _floorBrushType, v => _floorBrushType = v);
+                    if (_floorBrushType == FloorType.Floor)
+                    {
+                        GUILayout.Label("Floor Def");
+                        DrawDefBrushButtons(DefDatabase<FloorDef>.All, _floorDefBrush, v => _floorDefBrush = v);
+                    }
                     break;
                 case BuilderTool.Normal:
-                    GUILayout.Label("Normal Brush");
-                    DrawEnumBrushButtons(new[] { NormalType.Empty, NormalType.Wall, NormalType.Door }, _normalBrush, v => _normalBrush = v);
+                    GUILayout.Label("Structure Type");
+                    DrawEnumBrushButtons(new[] { NormalType.Empty, NormalType.Wall, NormalType.Door }, _normalBrushType, v => _normalBrushType = v);
+                    if (_normalBrushType == NormalType.Wall)
+                    {
+                        GUILayout.Label("Wall Def");
+                        DrawDefBrushButtons(DefDatabase<WallDef>.All, _wallDefBrush, v => _wallDefBrush = v);
+                    }
+                    else if (_normalBrushType == NormalType.Door)
+                    {
+                        GUILayout.Label("Door Def");
+                        DrawDefBrushButtons(DefDatabase<DoorDef>.All, _doorDefBrush, v => _doorDefBrush = v);
+                    }
                     break;
                 case BuilderTool.Connector:
                     GUILayout.Label("Connector Brush (any wall cell)");
@@ -382,7 +422,7 @@ namespace RoomGen
                     GUILayout.Label("Prop Id");
                     _currentPropId = GUILayout.TextField(_currentPropId);
                     GUILayout.Label($"Placement Rotation: {_currentPropRotation}°");
-                    if (GUILayout.Button("Rotate Pending +90")) _currentPropRotation = _currentPropRotation == PropRotation.West ? _currentPropRotation + 1 : _currentPropRotation = 0;
+                    if (GUILayout.Button("Rotate Pending +90")) _currentPropRotation = _currentPropRotation == PropRotation.West ? PropRotation.North : _currentPropRotation + 1;
                     GUILayout.Label("Click: place/select   Right-click: delete   R: rotate selected");
                     break;
             }
@@ -401,6 +441,22 @@ namespace RoomGen
             {
                 GUI.backgroundColor = EqualityComparer<T>.Default.Equals(v, current) ? Color.cyan : Color.white;
                 if (GUILayout.Button(v.ToString())) onPick(v);
+            }
+            GUI.backgroundColor = Color.white;
+        }
+
+        private void DrawDefBrushButtons<T>(IReadOnlyList<T> defs, string current, System.Action<string> onPick) where T : Def
+        {
+            if (defs.Count == 0)
+            {
+                GUILayout.Label("no defs found");
+                return;
+            }
+            foreach (var def in defs)
+            {
+                bool selected = def.DefName == current;
+                GUI.backgroundColor = selected ? Color.cyan : Color.white;
+                if (GUILayout.Button(def.DefName)) onPick(def.DefName);
             }
             GUI.backgroundColor = Color.white;
         }
