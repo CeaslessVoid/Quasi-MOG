@@ -1554,7 +1554,7 @@
         "",
         ""
     ],
-    "preferredDoorDef": "",
+    "preferredDoorDef": "Door",
     "props": [],
     "desiredConnections": 4,
     "extraConnectionChance": 0.15000000596046449,
