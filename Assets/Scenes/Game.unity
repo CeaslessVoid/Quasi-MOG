@@ -800,7 +800,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 286c0b46d5d7fbf42a84060fb95afa56, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  Defs: {fileID: 11400000, guid: d3fd211eff1652949a7410d255cdfe89, type: 2}
+  Defs: {fileID: 11400000, guid: df94fe09cc04e2546ab62c8f77764909, type: 2}
 --- !u!4 &1736498592
 Transform:
   m_ObjectHideFlags: 0

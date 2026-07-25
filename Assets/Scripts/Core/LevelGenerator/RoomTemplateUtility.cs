@@ -76,15 +76,15 @@ namespace RoomGen
             return (Edge)e;
         }
 
-        public static List<LocalConnectorRun> FindConnectorRuns(RoomTemplate t)
+        public static List<LocalConnectorRun> FindConnectorRuns(RoomData data)
         {
             var horizontalRuns = new List<LocalConnectorRun>();
-            for (int y = 0; y < t.height; y++)
-                ScanLine(t, horizontalRuns, isHorizontal: true, fixedIndex: y, length: t.width);
+            for (int y = 0; y < data.height; y++)
+                ScanLine(data, horizontalRuns, isHorizontal: true, fixedIndex: y, length: data.width);
 
             var verticalRuns = new List<LocalConnectorRun>();
-            for (int x = 0; x < t.width; x++)
-                ScanLine(t, verticalRuns, isHorizontal: false, fixedIndex: x, length: t.height);
+            for (int x = 0; x < data.width; x++)
+                ScanLine(data, verticalRuns, isHorizontal: false, fixedIndex: x, length: data.height);
 
             var result = new List<LocalConnectorRun>();
             var claimed = new HashSet<Vector2Int>();
@@ -107,7 +107,7 @@ namespace RoomGen
             return result;
         }
 
-        private static void ScanLine(RoomTemplate t, List<LocalConnectorRun> runs, bool isHorizontal, int fixedIndex, int length)
+        private static void ScanLine(RoomData data, List<LocalConnectorRun> runs, bool isHorizontal, int fixedIndex, int length)
         {
             LocalConnectorRun current = null;
             for (int i = 0; i < length; i++)
@@ -115,8 +115,8 @@ namespace RoomGen
                 int x = isHorizontal ? i : fixedIndex;
                 int y = isHorizontal ? fixedIndex : i;
 
-                bool eligible = t.IsConnectorEligible(x, y);
-                var connType = eligible ? t.GetConnector(x, y) : ConnectorType.None;
+                bool eligible = data.IsConnectorEligible(x, y);
+                var connType = eligible ? data.GetConnector(x, y) : ConnectorType.None;
 
                 if (connType != ConnectorType.None)
                 {
@@ -144,6 +144,5 @@ namespace RoomGen
 
             return false;
         }
-
     }
 }

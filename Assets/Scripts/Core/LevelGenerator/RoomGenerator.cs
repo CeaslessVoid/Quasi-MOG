@@ -53,6 +53,9 @@ namespace RoomGen
 
         public void SetTemplates(List<RoomTemplate> templates) => roomTemplates = templates;
 
+        [ContextMenu("Reload Room Library")]
+        private void ReloadRoomLibrary() => RoomLibraryLoader.InvalidateCache();
+
         [ContextMenu("Generate")]
         public void Generate()
         {
@@ -162,9 +165,12 @@ namespace RoomGen
         {
             if (!autoLoadFromRoomLibrary) return roomTemplates;
 
-            var pool = RoomLibraryLoader.LoadAll();
-            if (roomTemplates != null && roomTemplates.Count > 0)
-                pool.AddRange(roomTemplates);
+            var library = RoomLibraryLoader.LoadAll();
+            if (roomTemplates == null || roomTemplates.Count == 0) return library;
+
+            var pool = new List<RoomTemplate>(library.Count + roomTemplates.Count);
+            pool.AddRange(library);
+            pool.AddRange(roomTemplates);
             return pool;
         }
 
@@ -357,7 +363,7 @@ namespace RoomGen
 
                 bool bothCorridors = ownerIsCorridor && candidateTemplate.HasTag("corridor");
 
-                var localRuns = RoomTemplateUtility.FindConnectorRuns(candidateTemplate)
+                var localRuns = candidateTemplate.GetConnectorRuns()
                     .Where(r => r.cells.Count <= targetRun.cells.Count)
                     .Where(r => !bothCorridors || r.type == ConnectorType.AlwaysDouble)
                     .OrderBy(_ => _rng.Next())

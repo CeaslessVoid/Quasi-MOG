@@ -15,7 +15,7 @@ namespace RoomGen
         [SerializeField] private RoomBuilderVisuals visuals;
         [SerializeField] private float panelWidth = 300f;
 
-        private RoomBuilderState _state;
+        private RoomData _state;
         private BuilderTool _tool = BuilderTool.Floor;
 
         private FloorType _floorBrushType = FloorType.Floor;
@@ -55,9 +55,9 @@ namespace RoomGen
             if (targetCamera == null) targetCamera = Camera.main;
             RefreshFileList();
 
-            if (DefDatabase<WallDef>.All.Count > 0) _wallDefBrush = DefDatabase<WallDef>.All[0].DefName;
-            if (DefDatabase<DoorDef>.All.Count > 0) _doorDefBrush = DefDatabase<DoorDef>.All[0].DefName;
-            if (DefDatabase<FloorDef>.All.Count > 0) _floorDefBrush = DefDatabase<FloorDef>.All[0].DefName;
+            if (DefDatabase.All<WallDef>().Count > 0) _wallDefBrush = DefDatabase.All<WallDef>()[0].DefName;
+            if (DefDatabase.All<DoorDef>().Count > 0) _doorDefBrush = DefDatabase.All<DoorDef>()[0].DefName;
+            if (DefDatabase.All<FloorDef>().Count > 0) _floorDefBrush = DefDatabase.All<FloorDef>()[0].DefName;
         }
 
         private bool IsTypingInField => GUIUtility.keyboardControl != 0;
@@ -127,12 +127,12 @@ namespace RoomGen
                 case BuilderTool.Floor:
                     if (erase)
                     {
-                        _state.SetFloorAt(x, y, FloorType.Void);
+                        _state.SetFloor(x, y, FloorType.Void);
                     }
                     else
                     {
-                        _state.SetFloorAt(x, y, _floorBrushType);
-                        if (_floorBrushType == FloorType.Floor) _state.SetFloorDefAt(x, y, _floorDefBrush);
+                        _state.SetFloor(x, y, _floorBrushType);
+                        if (_floorBrushType == FloorType.Floor) _state.SetFloorDef(x, y, _floorDefBrush);
                     }
                     visuals.RefreshCell(_state, x, y);
                     break;
@@ -140,13 +140,13 @@ namespace RoomGen
                 case BuilderTool.Normal:
                     if (erase)
                     {
-                        _state.SetNormalAt(x, y, NormalType.Empty);
+                        _state.SetNormal(x, y, NormalType.Empty);
                     }
                     else
                     {
-                        _state.SetNormalAt(x, y, _normalBrushType);
-                        if (_normalBrushType == NormalType.Wall) _state.SetWallDefAt(x, y, _wallDefBrush);
-                        else if (_normalBrushType == NormalType.Door) _state.SetDoorDefAt(x, y, _doorDefBrush);
+                        _state.SetNormal(x, y, _normalBrushType);
+                        if (_normalBrushType == NormalType.Wall) _state.SetWallDef(x, y, _wallDefBrush);
+                        else if (_normalBrushType == NormalType.Door) _state.SetDoorDef(x, y, _doorDefBrush);
                     }
                     visuals.RefreshCell(_state, x, y);
                     visuals.RefreshCell(_state, x + 1, y);
@@ -156,12 +156,12 @@ namespace RoomGen
                     break;
 
                 case BuilderTool.Connector:
-                    if (_state.GetNormalAt(x, y) != NormalType.Wall)
+                    if (_state.GetNormal(x, y) != NormalType.Wall)
                     {
                         _statusMessage = "Connectors can only be placed on Wall cells.";
                         return;
                     }
-                    _state.SetConnectorAt(x, y, erase ? ConnectorType.None : _connectorBrush);
+                    _state.SetConnector(x, y, erase ? ConnectorType.None : _connectorBrush);
                     visuals.RefreshCell(_state, x, y);
                     break;
             }
@@ -211,8 +211,8 @@ namespace RoomGen
         {
             int w = ParseIntOrDefault(_newWidthField, 5);
             int h = ParseIntOrDefault(_newHeightField, 5);
-            _state = new RoomBuilderState();
-            _state.Initialize(w, h);
+            _state = new RoomData();
+            _state.Allocate(w, h);
             _state.templateId = _templateIdField;
             visuals.Rebuild(_state);
             _selectedPropCell = null;
@@ -300,7 +300,6 @@ namespace RoomGen
                     LoadRoom(file);
             }
             GUILayout.EndScrollView();
-
         }
 
         private void DrawTagSection()
@@ -345,7 +344,7 @@ namespace RoomGen
         {
             if (_state == null) return;
             GUILayout.Label("Preferred Door Def (used for generated connections)");
-            DrawDefBrushButtons(DefDatabase<DoorDef>.All, _state.preferredDoorDef, v => _state.preferredDoorDef = v);
+            DrawDefBrushButtons(DefDatabase.All<DoorDef>(), _state.preferredDoorDef, v => _state.preferredDoorDef = v);
             if (GUILayout.Button("Clear (use generator default)")) _state.preferredDoorDef = null;
         }
 
@@ -397,7 +396,7 @@ namespace RoomGen
                     if (_floorBrushType == FloorType.Floor)
                     {
                         GUILayout.Label("Floor Def");
-                        DrawDefBrushButtons(DefDatabase<FloorDef>.All, _floorDefBrush, v => _floorDefBrush = v);
+                        DrawDefBrushButtons(DefDatabase.All<FloorDef>(), _floorDefBrush, v => _floorDefBrush = v);
                     }
                     break;
                 case BuilderTool.Normal:
@@ -406,12 +405,12 @@ namespace RoomGen
                     if (_normalBrushType == NormalType.Wall)
                     {
                         GUILayout.Label("Wall Def");
-                        DrawDefBrushButtons(DefDatabase<WallDef>.All, _wallDefBrush, v => _wallDefBrush = v);
+                        DrawDefBrushButtons(DefDatabase.All<WallDef>(), _wallDefBrush, v => _wallDefBrush = v);
                     }
                     else if (_normalBrushType == NormalType.Door)
                     {
                         GUILayout.Label("Door Def");
-                        DrawDefBrushButtons(DefDatabase<DoorDef>.All, _doorDefBrush, v => _doorDefBrush = v);
+                        DrawDefBrushButtons(DefDatabase.All<DoorDef>(), _doorDefBrush, v => _doorDefBrush = v);
                     }
                     break;
                 case BuilderTool.Connector:
@@ -431,7 +430,11 @@ namespace RoomGen
         private void DrawToolButton(BuilderTool tool, string label)
         {
             GUI.backgroundColor = _tool == tool ? Color.cyan : Color.white;
-            if (GUILayout.Button(label)) _tool = tool;
+            if (GUILayout.Button(label))
+            {
+                _tool = tool;
+                visuals.SetConnectorOverlayVisible(_tool == BuilderTool.Connector);
+            }
             GUI.backgroundColor = Color.white;
         }
 

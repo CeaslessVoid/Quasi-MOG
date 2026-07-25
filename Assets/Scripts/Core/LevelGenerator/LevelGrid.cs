@@ -84,7 +84,7 @@ namespace RoomGen
 
             room.worldBounds = new RectInt(minX, minY, maxX - minX + 1, maxY - minY + 1);
 
-            foreach (var localRun in RoomTemplateUtility.FindConnectorRuns(t))
+            foreach (var localRun in t.GetConnectorRuns())
             {
                 var worldRun = new WorldConnectorRun
                 {

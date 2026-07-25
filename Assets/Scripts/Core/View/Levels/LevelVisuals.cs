@@ -105,7 +105,7 @@ namespace RoomGen
             }
             else if (data.floor == FloorType.Floor)
             {
-                var floorDef = DefDatabase<FloorDef>.Get(data.floorDef);
+                var floorDef = DefDatabase.Get<FloorDef>(data.floorDef);
                 _floorTilemap.SetTile(pos, GetFloorTile(floorDef));
             }
 
@@ -117,13 +117,13 @@ namespace RoomGen
                 bool w = IsWallLike(grid, cell + Vector2Int.left);
                 int bitmask = ComputeBitmask(n, e, s, w);
 
-                var wallDef = DefDatabase<WallDef>.Get(data.wallDef);
+                var wallDef = DefDatabase.Get<WallDef>(data.wallDef);
                 var layer = GetOrCreateWallLayer(wallDef != null ? wallDef.PhysicsMaterial : null);
                 layer.tilemap.SetTile(pos, GetWallTile(wallDef, bitmask));
             }
             else if (data.normal == NormalType.Door)
             {
-                var doorDef = DefDatabase<DoorDef>.Get(data.doorDef);
+                var doorDef = DefDatabase.Get<DoorDef>(data.doorDef);
                 _doorTilemap.SetTile(pos, GetDoorTile(doorDef));
             }
         }

@@ -12,7 +12,10 @@ namespace RoomGen
         private readonly Dictionary<Vector2Int, SpriteRenderer> _floorRenderers = new Dictionary<Vector2Int, SpriteRenderer>();
         private readonly Dictionary<Vector2Int, SpriteRenderer> _normalRenderers = new Dictionary<Vector2Int, SpriteRenderer>();
         private readonly Dictionary<Vector2Int, SpriteRenderer> _connectorRenderers = new Dictionary<Vector2Int, SpriteRenderer>();
+        private readonly Dictionary<Vector2Int, ConnectorType> _lastConnectorType = new Dictionary<Vector2Int, ConnectorType>();
         private readonly Dictionary<Vector2Int, PropVisual> _propVisuals = new Dictionary<Vector2Int, PropVisual>();
+
+        private bool _connectorOverlayVisible;
 
         private class PropVisual
         {
@@ -26,7 +29,17 @@ namespace RoomGen
             _root.SetParent(transform, false);
         }
 
-        public void Rebuild(RoomBuilderState state)
+        public void SetConnectorOverlayVisible(bool visible)
+        {
+            _connectorOverlayVisible = visible;
+            foreach (var kvp in _connectorRenderers)
+            {
+                _lastConnectorType.TryGetValue(kvp.Key, out var conn);
+                kvp.Value.enabled = visible && conn != ConnectorType.None;
+            }
+        }
+
+        public void Rebuild(RoomData state)
         {
             EnsureInitialized();
             Clear();
@@ -55,6 +68,7 @@ namespace RoomGen
             _floorRenderers.Clear();
             _normalRenderers.Clear();
             _connectorRenderers.Clear();
+            _lastConnectorType.Clear();
             _propVisuals.Clear();
         }
 
@@ -118,12 +132,12 @@ namespace RoomGen
             sr.sortingOrder = 15;
         }
 
-        public void RefreshCell(RoomBuilderState state, int x, int y)
+        public void RefreshCell(RoomData state, int x, int y)
         {
             if (!state.InBounds(x, y)) return;
             var cell = new Vector2Int(x, y);
 
-            var floor = state.GetFloorAt(x, y);
+            var floor = state.GetFloor(x, y);
             var floorR = _floorRenderers[cell];
             if (floor == FloorType.Void)
             {
@@ -137,7 +151,7 @@ namespace RoomGen
             }
             else
             {
-                var floorDef = DefDatabase<FloorDef>.Get(state.GetFloorDefAt(x, y));
+                var floorDef = DefDatabase.Get<FloorDef>(state.GetFloorDef(x, y));
                 floorR.enabled = true;
                 if (floorDef != null && floorDef.HasTexture)
                 {
@@ -151,7 +165,7 @@ namespace RoomGen
                 }
             }
 
-            var normal = state.GetNormalAt(x, y);
+            var normal = state.GetNormal(x, y);
             var normalR = _normalRenderers[cell];
             if (normal == NormalType.Wall)
             {
@@ -161,7 +175,7 @@ namespace RoomGen
                 bool w = IsWallLike(state, x - 1, y);
                 int bitmask = ComputeBitmask(n, e, s, w);
 
-                var wallDef = DefDatabase<WallDef>.Get(state.GetWallDefAt(x, y));
+                var wallDef = DefDatabase.Get<WallDef>(state.GetWallDef(x, y));
                 normalR.enabled = true;
                 if (wallDef != null && wallDef.HasTexture)
                 {
@@ -176,7 +190,7 @@ namespace RoomGen
             }
             else if (normal == NormalType.Door)
             {
-                var doorDef = DefDatabase<DoorDef>.Get(state.GetDoorDefAt(x, y));
+                var doorDef = DefDatabase.Get<DoorDef>(state.GetDoorDef(x, y));
                 normalR.enabled = true;
                 if (doorDef != null && doorDef.HasTexture)
                 {
@@ -194,7 +208,8 @@ namespace RoomGen
                 normalR.enabled = false;
             }
 
-            var conn = state.GetConnectorAt(x, y);
+            var conn = state.GetConnector(x, y);
+            _lastConnectorType[cell] = conn;
             var connR = _connectorRenderers[cell];
             if (conn == ConnectorType.None)
             {
@@ -202,7 +217,7 @@ namespace RoomGen
             }
             else
             {
-                connR.enabled = true;
+                connR.enabled = _connectorOverlayVisible;
                 connR.sprite = DefVisualUtility.SolidSprite;
                 connR.color = conn switch
                 {
@@ -213,10 +228,10 @@ namespace RoomGen
             }
         }
 
-        private static bool IsWallLike(RoomBuilderState state, int x, int y)
+        private static bool IsWallLike(RoomData state, int x, int y)
         {
             if (!state.InBounds(x, y)) return false;
-            return state.GetNormalAt(x, y) == NormalType.Wall;
+            return state.GetNormal(x, y) == NormalType.Wall;
         }
 
         public void RefreshProp(PropPlacement p)

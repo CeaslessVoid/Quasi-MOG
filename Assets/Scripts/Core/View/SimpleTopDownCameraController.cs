@@ -2,12 +2,6 @@ using UnityEngine;
 
 namespace RoomGen
 {
-    /// <summary>
-    /// WASD pan + scroll-wheel zoom for a top-down orthographic camera. Shared by the room
-    /// builder and the level viewer rather than duplicated in each. Disables itself while a
-    /// text field has IMGUI keyboard focus, so typing "w" into a name field doesn't yank the
-    /// camera around.
-    /// </summary>
     public class SimpleTopDownCameraController : MonoBehaviour
     {
         [SerializeField] private Camera targetCamera;
@@ -42,7 +36,6 @@ namespace RoomGen
 
             if (move != Vector3.zero)
             {
-                // Pan speed scales with zoom so it feels the same whether zoomed in or out.
                 float speedScale = targetCamera.orthographicSize / 10f;
                 targetCamera.transform.position += move.normalized * (panSpeed * speedScale * Time.deltaTime);
             }

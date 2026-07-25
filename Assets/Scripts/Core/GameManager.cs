@@ -5,7 +5,8 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
-    public GameDefDatabase Defs;
+    public DefDatabase Defs;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
