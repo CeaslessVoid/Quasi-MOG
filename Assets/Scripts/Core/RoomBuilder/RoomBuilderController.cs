@@ -343,9 +343,16 @@ namespace RoomGen
         private void DrawRoomDefaultsSection()
         {
             if (_state == null) return;
-            GUILayout.Label("Preferred Door Def (used for generated connections)");
-            DrawDefBrushButtons(DefDatabase.All<DoorDef>(), _state.preferredDoorDef, v => _state.preferredDoorDef = v);
-            if (GUILayout.Button("Clear (use generator default)")) _state.preferredDoorDef = null;
+
+            GUILayout.Label("Preferred Single Door Def (used for generated connections)");
+            DrawDefBrushButtons(DefDatabase.All<DoorDef>(), _state.preferredSingleDoorDef, v => _state.preferredSingleDoorDef = v);
+            if (GUILayout.Button("Clear (use generator default)")) _state.preferredSingleDoorDef = null;
+
+            GUILayout.Space(4);
+
+            GUILayout.Label("Preferred Double Door Def (used for generated connections)");
+            DrawDefBrushButtons(DefDatabase.All<DoorDef>(), _state.preferredDoubleDoorDef, v => _state.preferredDoubleDoorDef = v);
+            if (GUILayout.Button("Clear (use generator default)")) _state.preferredDoubleDoorDef = null;
         }
 
         private void DrawWeightsSection()
@@ -364,12 +371,6 @@ namespace RoomGen
 
             GUILayout.Label($"Selection Weight: {_state.selectionWeight:0.00}");
             _state.selectionWeight = GUILayout.HorizontalSlider(_state.selectionWeight, 0.1f, 5f);
-
-            GUILayout.Label($"Reconnection Chance: {_state.reconnectionChance:0.00}");
-            _state.reconnectionChance = GUILayout.HorizontalSlider(_state.reconnectionChance, 0f, 1f);
-
-            GUILayout.Label($"Reconnection Double Chance: {_state.reconnectionDoubleChance:0.00}");
-            _state.reconnectionDoubleChance = GUILayout.HorizontalSlider(_state.reconnectionDoubleChance, 0f, 1f);
         }
 
         private void DrawToolSection()
@@ -458,7 +459,8 @@ namespace RoomGen
             foreach (var def in defs)
             {
                 bool selected = def.DefName == current;
-                GUI.backgroundColor = selected ? Color.cyan : Color.white;
+
+                    GUI.backgroundColor = selected ? Color.cyan : Color.white;
                 if (GUILayout.Button(def.DefName)) onPick(def.DefName);
             }
             GUI.backgroundColor = Color.white;

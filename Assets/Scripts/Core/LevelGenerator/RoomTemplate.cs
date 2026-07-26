@@ -31,9 +31,8 @@ namespace RoomGen
         public float extraConnectionChance => data.extraConnectionChance;
         public float chanceToConnectWhenBelowTarget => data.chanceToConnectWhenBelowTarget;
         public float selectionWeight => data.selectionWeight;
-        public float reconnectionChance => data.reconnectionChance;
-        public float reconnectionDoubleChance => data.reconnectionDoubleChance;
-        public string preferredDoorDef => data.preferredDoorDef;
+        public string preferredSingleDoorDef => data.preferredSingleDoorDef;
+        public string preferredDoubleDoorDef => data.preferredDoubleDoorDef;
         public List<PropPlacement> props => data.props;
 
         public List<LocalConnectorRun> GetConnectorRuns()

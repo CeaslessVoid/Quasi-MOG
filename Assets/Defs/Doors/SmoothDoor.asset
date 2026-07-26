@@ -10,11 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ba0d42b0096141340abbdbafba395cfb, type: 3}
-  m_Name: Door
+  m_Name: SmoothDoor
   m_EditorClassIdentifier: Assembly-CSharp::GameDefs.DoorDef
-  defName: Door
-  closedSprite: {fileID: 1046258562410932980, guid: be473d06acf0f4a4a95dbca3c3b7f2b2, type: 3}
-  openSprite: {fileID: 1046258562410932980, guid: be473d06acf0f4a4a95dbca3c3b7f2b2, type: 3}
-  tintColor: {r: 0.4117647, g: 0.4117647, b: 0.4117647, a: 1}
+  defName: SmoothDoor
+  chanceToBlockBullet: 1
+  blocksVision: 1
   physicsMaterial: {fileID: 0}
-  blocksProjectilesWhenClosed: 1
+  isDoubleDoor: 0
+  northSprite: {fileID: 1046258562410932980, guid: be473d06acf0f4a4a95dbca3c3b7f2b2, type: 3}
+  eastSprite: {fileID: 659067892511234726, guid: 651b862121bada94580df74e16dab8b0, type: 3}
+  tintColor: {r: 0.4117647, g: 0.4117647, b: 0.4117647, a: 1}

@@ -1195,7 +1195,8 @@
         "",
         ""
     ],
-    "preferredDoorDef": "Door",
+    "preferredSingleDoorDef": "SmoothDoor",
+    "preferredDoubleDoorDef": "SmoothDoubleDoor",
     "props": [],
     "desiredConnections": 2,
     "extraConnectionChance": 0.15000000596046449,

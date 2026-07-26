@@ -21,7 +21,8 @@ namespace RoomGen
         public string[] wallDefLayer;
         public string[] doorDefLayer;
         public string[] floorDefLayer;
-        public string preferredDoorDef;
+        public string preferredSingleDoorDef;
+        public string preferredDoubleDoorDef;
 
         public List<PropPlacement> props = new List<PropPlacement>();
 
@@ -29,8 +30,6 @@ namespace RoomGen
         public float extraConnectionChance = 0.15f;
         public float chanceToConnectWhenBelowTarget = 0.9f;
         public float selectionWeight = 1f;
-        public float reconnectionChance = 0.2f;
-        public float reconnectionDoubleChance = 0.5f;
 
         public int CellCount => width * height;
 
@@ -46,7 +45,8 @@ namespace RoomGen
             doorDefLayer = new string[count];
             floorDefLayer = new string[count];
             props = new List<PropPlacement>();
-            preferredDoorDef = null;
+            preferredSingleDoorDef = null;
+            preferredDoubleDoorDef = null;
         }
 
         public RoomData Clone()
@@ -65,14 +65,13 @@ namespace RoomGen
                 wallDefLayer = CloneOrNew(wallDefLayer, count),
                 doorDefLayer = CloneOrNew(doorDefLayer, count),
                 floorDefLayer = CloneOrNew(floorDefLayer, count),
-                preferredDoorDef = preferredDoorDef,
+                preferredSingleDoorDef = preferredSingleDoorDef,
+                preferredDoubleDoorDef = preferredDoubleDoorDef,
                 props = new List<PropPlacement>(props),
                 desiredConnections = desiredConnections,
                 extraConnectionChance = extraConnectionChance,
                 chanceToConnectWhenBelowTarget = chanceToConnectWhenBelowTarget,
-                selectionWeight = selectionWeight,
-                reconnectionChance = reconnectionChance,
-                reconnectionDoubleChance = reconnectionDoubleChance
+                selectionWeight = selectionWeight
             };
         }
 

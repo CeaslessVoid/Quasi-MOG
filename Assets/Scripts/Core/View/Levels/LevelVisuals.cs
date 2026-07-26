@@ -7,11 +7,8 @@ namespace RoomGen
 {
     public class LevelVisuals : RoomVisualsBase
     {
-        [SerializeField] private PhysicsMaterial2D doorPhysicsMaterial;
-
         private Transform _root;
         private Tilemap _floorTilemap;
-        private Tilemap _doorTilemap;
 
         private class WallLayer
         {
@@ -23,14 +20,18 @@ namespace RoomGen
         private readonly Dictionary<PhysicsMaterial2D, WallLayer> _materialWallLayers = new Dictionary<PhysicsMaterial2D, WallLayer>();
         private int _nextWallSortingOrder = 5;
 
+        private Transform _doorRoot;
+        private readonly Dictionary<Vector2Int, DoorInstance> _doorsByCell = new Dictionary<Vector2Int, DoorInstance>();
+        private readonly HashSet<Vector2Int> _processedDoorCells = new HashSet<Vector2Int>();
+        private const int DoorSortingOrder = 2;
+
         private readonly Dictionary<FloorDef, Tile> _floorTileCache = new Dictionary<FloorDef, Tile>();
         private readonly Dictionary<(WallDef, int), Tile> _wallTileCache = new Dictionary<(WallDef, int), Tile>();
-        private readonly Dictionary<DoorDef, Tile> _doorTileCache = new Dictionary<DoorDef, Tile>();
 
         private Tile _waterTile;
         private Tile _missingFloorTile;
         private Tile _missingWallTile;
-        private Tile _missingDoorTile;
+        private Sprite _missingDoorSprite;
 
         protected override void OnInitialize()
         {
@@ -45,25 +46,13 @@ namespace RoomGen
             _floorTilemap = floorGO.AddComponent<Tilemap>();
             floorGO.AddComponent<TilemapRenderer>().sortingOrder = 0;
 
-            var doorGO = new GameObject("DoorTilemap");
-            doorGO.transform.SetParent(_root, false);
-            _doorTilemap = doorGO.AddComponent<Tilemap>();
-            doorGO.AddComponent<TilemapRenderer>().sortingOrder = 1000;
-
-            var doorRb = doorGO.AddComponent<Rigidbody2D>();
-            doorRb.bodyType = RigidbodyType2D.Static;
-
-            var doorTmCollider = doorGO.AddComponent<TilemapCollider2D>();
-            doorTmCollider.compositeOperation = Collider2D.CompositeOperation.Merge;
-
-            var doorComposite = doorGO.AddComponent<CompositeCollider2D>();
-            doorComposite.geometryType = CompositeCollider2D.GeometryType.Polygons;
-            if (doorPhysicsMaterial != null) doorComposite.sharedMaterial = doorPhysicsMaterial;
+            _doorRoot = new GameObject("Doors").transform;
+            _doorRoot.SetParent(_root, false);
 
             _waterTile = BuildSolidTile(new Color(0.2f, 0.4f, 0.9f));
             _missingFloorTile = BuildSolidTile(Color.white, DefVisualUtility.MissingSprite);
             _missingWallTile = BuildSolidTile(Color.white, DefVisualUtility.MissingSprite);
-            _missingDoorTile = BuildSolidTile(new Color(0.65f, 0.4f, 0.1f), DefVisualUtility.MissingSprite);
+            _missingDoorSprite = DefVisualUtility.MissingSprite;
         }
 
         public void Rebuild(LevelGrid grid)
@@ -88,10 +77,15 @@ namespace RoomGen
         private void ClearAll()
         {
             _floorTilemap.ClearAllTiles();
-            _doorTilemap.ClearAllTiles();
             if (_defaultWallLayer != null) _defaultWallLayer.tilemap.ClearAllTiles();
             foreach (var layer in _materialWallLayers.Values)
                 layer.tilemap.ClearAllTiles();
+
+            for (int i = _doorRoot.childCount - 1; i >= 0; i--)
+                Destroy(_doorRoot.GetChild(i).gameObject);
+
+            _doorsByCell.Clear();
+            _processedDoorCells.Clear();
         }
 
         private void RefreshCell(LevelGrid grid, Vector2Int cell)
@@ -123,12 +117,112 @@ namespace RoomGen
             }
             else if (data.normal == NormalType.Door)
             {
-                var doorDef = DefDatabase.Get<DoorDef>(data.doorDef);
-                _doorTilemap.SetTile(pos, GetDoorTile(doorDef));
+                RefreshDoorCell(grid, cell);
             }
         }
 
         private static bool IsWallLike(LevelGrid grid, Vector2Int cell) => grid.GetCell(cell).normal == NormalType.Wall;
+
+        private void RefreshDoorCell(LevelGrid grid, Vector2Int cell)
+        {
+            if (_processedDoorCells.Contains(cell)) return;
+
+            var data = grid.GetCell(cell);
+            var doorDef = DefDatabase.Get<DoorDef>(data.doorDef);
+            bool isNorthOrientation = grid.IsNorthOrientedDoor(cell);
+            bool isDouble = doorDef != null && doorDef.IsDoubleDoor;
+
+            if (isDouble && grid.TryFindDoorPartner(cell, data.doorDef, out var partner))
+            {
+                _processedDoorCells.Add(cell);
+                _processedDoorCells.Add(partner);
+
+                bool selfIsLeafA = IsLeafA(cell, partner, isNorthOrientation);
+                var leafACell = selfIsLeafA ? cell : partner;
+                var leafBCell = selfIsLeafA ? partner : cell;
+                BuildDoubleDoor(leafACell, leafBCell, doorDef, isNorthOrientation);
+            }
+            else
+            {
+                _processedDoorCells.Add(cell);
+                BuildSingleDoor(cell, doorDef, isNorthOrientation);
+            }
+        }
+
+        private static bool IsLeafA(Vector2Int cell, Vector2Int partner, bool isNorthOrientation) =>
+            isNorthOrientation ? partner.x > cell.x : partner.y < cell.y;
+
+        private void BuildSingleDoor(Vector2Int cell, DoorDef def, bool isNorthOrientation)
+        {
+            Vector3 rootPos = CellCenter(cell);
+            float slideDistance = cellSize * 0.5f;
+            BuildDoorInstance(new[] { cell }, rootPos, 0f, slideDistance, def, isNorthOrientation, new Vector2(cellSize, cellSize));
+        }
+
+        private void BuildDoubleDoor(Vector2Int leafACell, Vector2Int leafBCell, DoorDef def, bool isNorthOrientation)
+        {
+            Vector3 rootPos = Vector3.Lerp(CellCenter(leafACell), CellCenter(leafBCell), 0.5f);
+            float leafPositionOffset = cellSize * 0.5f;
+            float slideDistance = cellSize;
+            Vector2 colliderSize = isNorthOrientation
+                ? new Vector2(cellSize * 2f, cellSize)
+                : new Vector2(cellSize, cellSize * 2f);
+
+            BuildDoorInstance(new[] { leafACell, leafBCell }, rootPos, leafPositionOffset, slideDistance, def, isNorthOrientation, colliderSize);
+        }
+
+        private void BuildDoorInstance(Vector2Int[] cells, Vector3 rootLocalPos, float leafPositionOffset, float slideDistance, DoorDef def, bool isNorthOrientation, Vector2 colliderSize)
+        {
+            var go = new GameObject("Door");
+            go.transform.SetParent(_doorRoot, false);
+            go.transform.localPosition = rootLocalPos;
+
+            var rb = go.AddComponent<Rigidbody2D>();
+            rb.bodyType = RigidbodyType2D.Static;
+
+            var collider = go.AddComponent<BoxCollider2D>();
+            collider.size = colliderSize;
+            if (def != null && def.PhysicsMaterial != null) collider.sharedMaterial = def.PhysicsMaterial;
+
+            Sprite baseSprite = def != null ? (isNorthOrientation ? def.NorthSprite : def.EastSprite) : null;
+            if (baseSprite == null) baseSprite = _missingDoorSprite;
+            Color tint = def != null ? def.TintColor : Color.white;
+
+            Vector3 axis = isNorthOrientation ? Vector3.right : Vector3.up;
+            float leafASign = isNorthOrientation ? -1f : 1f;
+            Vector3 mirrorScale = isNorthOrientation ? new Vector3(-1f, 1f, 1f) : new Vector3(1f, -1f, 1f);
+
+            Vector3 leafAOpenDirection = axis * leafASign;
+            Vector3 leafBOpenDirection = -leafAOpenDirection;
+
+            Vector3 leafAPos = leafAOpenDirection * leafPositionOffset;
+            Vector3 leafBPos = -leafAPos;
+
+            var leafA = CreateLeaf(go.transform, "LeafA", baseSprite, tint, leafAPos, Vector3.one);
+            var leafB = CreateLeaf(go.transform, "LeafB", baseSprite, tint, leafBPos, mirrorScale);
+
+            var doorInstance = go.AddComponent<DoorInstance>();
+            doorInstance.Configure(def, leafA, leafB, leafAOpenDirection, leafBOpenDirection, slideDistance);
+
+            foreach (var cell in cells)
+                _doorsByCell[cell] = doorInstance;
+        }
+
+        private SpriteRenderer CreateLeaf(Transform parent, string name, Sprite sprite, Color color, Vector3 localPos, Vector3 localScale)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = localPos;
+            go.transform.localScale = localScale;
+
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = sprite;
+            sr.color = color;
+            sr.sortingOrder = DoorSortingOrder;
+            return sr;
+        }
+
+        private Vector3 CellCenter(Vector2Int cell) => new Vector3((cell.x + 0.5f) * cellSize, (cell.y + 0.5f) * cellSize, 0f);
 
         private WallLayer GetOrCreateWallLayer(PhysicsMaterial2D material)
         {
@@ -187,21 +281,8 @@ namespace RoomGen
             tile = ScriptableObject.CreateInstance<Tile>();
             tile.sprite = def.GetSprite(bitmask);
             tile.color = def.TintColor;
-            tile.colliderType = def.BlocksProjectiles ? Tile.ColliderType.Grid : Tile.ColliderType.None;
+            tile.colliderType = Tile.ColliderType.Grid;
             _wallTileCache[key] = tile;
-            return tile;
-        }
-
-        private Tile GetDoorTile(DoorDef def)
-        {
-            if (def == null || !def.HasTexture) return _missingDoorTile;
-            if (_doorTileCache.TryGetValue(def, out var tile)) return tile;
-
-            tile = ScriptableObject.CreateInstance<Tile>();
-            tile.sprite = def.ClosedSprite;
-            tile.color = def.TintColor;
-            tile.colliderType = def.BlocksProjectilesWhenClosed ? Tile.ColliderType.Grid : Tile.ColliderType.None;
-            _doorTileCache[def] = tile;
             return tile;
         }
 

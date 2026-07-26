@@ -9,6 +9,8 @@ namespace RoomGen
         public List<PlacedRoom> PlacedRooms { get; } = new List<PlacedRoom>();
         private int _nextRoomId = 0;
 
+        public IReadOnlyDictionary<Vector2Int, LevelCell> Cells => _cells;
+
         public LevelCell GetCell(Vector2Int pos) => _cells.TryGetValue(pos, out var c) ? c : LevelCell.Empty;
 
         public bool HasCell(Vector2Int pos) => _cells.ContainsKey(pos);
@@ -113,7 +115,7 @@ namespace RoomGen
             _cells[pos] = cell;
         }
 
-        public DoorSize ResolveConnection(List<Vector2Int> overlapCellsInOrder, ConnectorType typeA, ConnectorType typeB, System.Random rng, string doorDefName, float? overrideDoubleChance = null, bool forceDoubleOverride = false)
+        public DoorSize ResolveConnection(List<Vector2Int> overlapCellsInOrder, ConnectorType typeA, ConnectorType typeB, System.Random rng, string singleDoorDef, string doubleDoorDef, float? overrideDoubleChance = null, bool forceDoubleOverride = false)
         {
             foreach (var c in overlapCellsInOrder) SetNormal(c, NormalType.Wall);
 
@@ -122,7 +124,7 @@ namespace RoomGen
 
             if (overlapCellsInOrder.Count == 1)
             {
-                SetNormal(overlapCellsInOrder[0], NormalType.Door, doorDefName);
+                SetNormal(overlapCellsInOrder[0], NormalType.Door, singleDoorDef);
                 return DoorSize.Single1x1;
             }
 
@@ -131,11 +133,11 @@ namespace RoomGen
                 bool wantsDoubleHere = forceDouble || (!forceSingle && (!overrideDoubleChance.HasValue || rng.NextDouble() < overrideDoubleChance.Value));
                 if (wantsDoubleHere)
                 {
-                    SetNormal(overlapCellsInOrder[0], NormalType.Door, doorDefName);
-                    SetNormal(overlapCellsInOrder[1], NormalType.Door, doorDefName);
+                    SetNormal(overlapCellsInOrder[0], NormalType.Door, doubleDoorDef);
+                    SetNormal(overlapCellsInOrder[1], NormalType.Door, doubleDoorDef);
                     return DoorSize.Double2x1;
                 }
-                SetNormal(overlapCellsInOrder[rng.Next(0, 2)], NormalType.Door, doorDefName);
+                SetNormal(overlapCellsInOrder[rng.Next(0, 2)], NormalType.Door, singleDoorDef);
                 return DoorSize.Single1x1;
             }
 
@@ -151,13 +153,13 @@ namespace RoomGen
             if (wantsDouble && canDouble)
             {
                 int startIndex = rng.Next(0, eligible.Count - 1);
-                SetNormal(eligible[startIndex], NormalType.Door, doorDefName);
-                SetNormal(eligible[startIndex + 1], NormalType.Door, doorDefName);
+                SetNormal(eligible[startIndex], NormalType.Door, doubleDoorDef);
+                SetNormal(eligible[startIndex + 1], NormalType.Door, doubleDoorDef);
                 return DoorSize.Double2x1;
             }
 
             int index = rng.Next(0, eligible.Count);
-            SetNormal(eligible[index], NormalType.Door, doorDefName);
+            SetNormal(eligible[index], NormalType.Door, singleDoorDef);
             return DoorSize.Single1x1;
         }
 
@@ -167,6 +169,47 @@ namespace RoomGen
                 || GetCell(cell + Vector2Int.down).normal == NormalType.Door
                 || GetCell(cell + Vector2Int.left).normal == NormalType.Door
                 || GetCell(cell + Vector2Int.right).normal == NormalType.Door;
+        }
+
+        public bool IsWallBlocking(Vector2Int cell) => GetCell(cell).normal == NormalType.Wall;
+
+        public bool IsNorthOrientedDoor(Vector2Int cell)
+        {
+            bool northSouthOpen = !IsWallBlocking(cell + Vector2Int.up) && !IsWallBlocking(cell + Vector2Int.down);
+            bool eastWestOpen = !IsWallBlocking(cell + Vector2Int.right) && !IsWallBlocking(cell + Vector2Int.left);
+
+            if (northSouthOpen && !eastWestOpen) return true;
+            if (eastWestOpen && !northSouthOpen) return false;
+            return true;
+        }
+
+        public bool IsMatchingDoor(Vector2Int cell, string doorDefName)
+        {
+            var c = GetCell(cell);
+            return c.normal == NormalType.Door && c.doorDef == doorDefName;
+        }
+
+        public bool TryFindDoorPartner(Vector2Int cell, string doorDefName, out Vector2Int partner)
+        {
+            bool isNorthOrientation = IsNorthOrientedDoor(cell);
+
+            if (isNorthOrientation)
+            {
+                var east = cell + Vector2Int.right;
+                var west = cell + Vector2Int.left;
+                if (IsMatchingDoor(east, doorDefName)) { partner = east; return true; }
+                if (IsMatchingDoor(west, doorDefName)) { partner = west; return true; }
+            }
+            else
+            {
+                var north = cell + Vector2Int.up;
+                var south = cell + Vector2Int.down;
+                if (IsMatchingDoor(north, doorDefName)) { partner = north; return true; }
+                if (IsMatchingDoor(south, doorDefName)) { partner = south; return true; }
+            }
+
+            partner = default;
+            return false;
         }
     }
 }

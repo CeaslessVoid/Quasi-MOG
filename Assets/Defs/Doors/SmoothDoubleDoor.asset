@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba0d42b0096141340abbdbafba395cfb, type: 3}
+  m_Name: SmoothDoubleDoor
+  m_EditorClassIdentifier: Assembly-CSharp::GameDefs.DoorDef
+  defName: SmoothDoubleDoor
+  chanceToBlockBullet: 1
+  blocksVision: 1
+  physicsMaterial: {fileID: 0}
+  isDoubleDoor: 1
+  northSprite: {fileID: 8832235762741588047, guid: 7828ec89af5b22d4fa53279de6f77619, type: 3}
+  eastSprite: {fileID: 6951041545814427575, guid: 133b817732f83d54597841b2abe0f51d, type: 3}
+  tintColor: {r: 0.4117647, g: 0.4117647, b: 0.4117647, a: 1}
+  singleDoorFallback: {fileID: 11400000, guid: 7a0defee33f4bc543a89441789849fd8, type: 2}

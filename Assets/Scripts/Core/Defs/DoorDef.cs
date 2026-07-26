@@ -3,21 +3,19 @@ using UnityEngine;
 namespace GameDefs
 {
     [CreateAssetMenu(fileName = "NewDoorDef", menuName = "Defs/Door Def")]
-    public class DoorDef : Def
+    public class DoorDef : BlockerDef
     {
-        [SerializeField] private Sprite closedSprite;
-        [SerializeField] private Sprite openSprite;
+        [SerializeField] private bool isDoubleDoor;
+        [SerializeField] private Sprite northSprite;
+        [SerializeField] private Sprite eastSprite;
         [SerializeField] private Color tintColor = Color.white;
+        [SerializeField] private DoorDef singleDoorFallback;
 
-        [Header("Physics")]
-        [SerializeField] private PhysicsMaterial2D physicsMaterial;
-        [SerializeField] private bool blocksProjectilesWhenClosed = true;
-
-        public Sprite ClosedSprite => closedSprite;
-        public Sprite OpenSprite => openSprite;
+        public bool IsDoubleDoor => isDoubleDoor;
+        public Sprite NorthSprite => northSprite;
+        public Sprite EastSprite => eastSprite;
         public Color TintColor => tintColor;
-        public PhysicsMaterial2D PhysicsMaterial => physicsMaterial;
-        public bool BlocksProjectilesWhenClosed => blocksProjectilesWhenClosed;
-        public bool HasTexture => closedSprite != null;
+        public DoorDef SingleDoorFallback => singleDoorFallback;
+        public bool HasTexture => northSprite != null && eastSprite != null;
     }
 }

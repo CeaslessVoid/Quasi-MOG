@@ -11,6 +11,7 @@ namespace RoomGen
 
         private readonly Dictionary<Vector2Int, SpriteRenderer> _floorRenderers = new Dictionary<Vector2Int, SpriteRenderer>();
         private readonly Dictionary<Vector2Int, SpriteRenderer> _normalRenderers = new Dictionary<Vector2Int, SpriteRenderer>();
+        private readonly Dictionary<Vector2Int, SpriteRenderer> _doorLeafBRenderers = new Dictionary<Vector2Int, SpriteRenderer>();
         private readonly Dictionary<Vector2Int, SpriteRenderer> _connectorRenderers = new Dictionary<Vector2Int, SpriteRenderer>();
         private readonly Dictionary<Vector2Int, ConnectorType> _lastConnectorType = new Dictionary<Vector2Int, ConnectorType>();
         private readonly Dictionary<Vector2Int, PropVisual> _propVisuals = new Dictionary<Vector2Int, PropVisual>();
@@ -67,6 +68,7 @@ namespace RoomGen
 
             _floorRenderers.Clear();
             _normalRenderers.Clear();
+            _doorLeafBRenderers.Clear();
             _connectorRenderers.Clear();
             _lastConnectorType.Clear();
             _propVisuals.Clear();
@@ -76,6 +78,7 @@ namespace RoomGen
         {
             _floorRenderers[cell] = NewSpriteChild($"Floor_{cell.x}_{cell.y}", cell, 0);
             _normalRenderers[cell] = NewSpriteChild($"Normal_{cell.x}_{cell.y}", cell, 5);
+            _doorLeafBRenderers[cell] = NewSpriteChild($"DoorLeafB_{cell.x}_{cell.y}", cell, 5);
             _connectorRenderers[cell] = NewSpriteChild($"Conn_{cell.x}_{cell.y}", cell, 8);
         }
 
@@ -167,6 +170,8 @@ namespace RoomGen
 
             var normal = state.GetNormal(x, y);
             var normalR = _normalRenderers[cell];
+            var doorLeafB = _doorLeafBRenderers[cell];
+
             if (normal == NormalType.Wall)
             {
                 bool n = IsWallLike(state, x, y + 1);
@@ -187,14 +192,18 @@ namespace RoomGen
                     normalR.sprite = DefVisualUtility.MissingSprite;
                     normalR.color = Color.white;
                 }
+                doorLeafB.enabled = false;
             }
             else if (normal == NormalType.Door)
             {
                 var doorDef = DefDatabase.Get<DoorDef>(state.GetDoorDef(x, y));
+                bool isNorthOrientation = IsNorthOrientedDoor(state, x, y);
+                Sprite baseSprite = doorDef != null ? (isNorthOrientation ? doorDef.NorthSprite : doorDef.EastSprite) : null;
+
                 normalR.enabled = true;
-                if (doorDef != null && doorDef.HasTexture)
+                if (baseSprite != null)
                 {
-                    normalR.sprite = doorDef.ClosedSprite;
+                    normalR.sprite = baseSprite;
                     normalR.color = doorDef.TintColor;
                 }
                 else
@@ -202,10 +211,18 @@ namespace RoomGen
                     normalR.sprite = DefVisualUtility.MissingSprite;
                     normalR.color = new Color(0.65f, 0.4f, 0.1f, 1f);
                 }
+
+                doorLeafB.enabled = true;
+                doorLeafB.sprite = normalR.sprite;
+                doorLeafB.color = normalR.color;
+                doorLeafB.transform.localScale = isNorthOrientation
+                    ? new Vector3(-cellSize, cellSize, 1f)
+                    : new Vector3(cellSize, -cellSize, 1f);
             }
             else
             {
                 normalR.enabled = false;
+                doorLeafB.enabled = false;
             }
 
             var conn = state.GetConnector(x, y);
@@ -232,6 +249,16 @@ namespace RoomGen
         {
             if (!state.InBounds(x, y)) return false;
             return state.GetNormal(x, y) == NormalType.Wall;
+        }
+
+        private static bool IsNorthOrientedDoor(RoomData state, int x, int y)
+        {
+            bool northSouthOpen = !IsWallLike(state, x, y + 1) && !IsWallLike(state, x, y - 1);
+            bool eastWestOpen = !IsWallLike(state, x + 1, y) && !IsWallLike(state, x - 1, y);
+
+            if (northSouthOpen && !eastWestOpen) return true;
+            if (eastWestOpen && !northSouthOpen) return false;
+            return true;
         }
 
         public void RefreshProp(PropPlacement p)

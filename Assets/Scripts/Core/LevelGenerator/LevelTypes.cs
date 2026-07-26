@@ -37,6 +37,9 @@ namespace RoomGen
         public List<Vector2Int> cells = new List<Vector2Int>();
         public ConnectorState state = ConnectorState.Open;
         public int connectedToRoomId = -1;
+
+        private HashSet<Vector2Int> _cellSet;
+        public HashSet<Vector2Int> CellSet => _cellSet ??= new HashSet<Vector2Int>(cells);
     }
 
     public class PlacedRoom

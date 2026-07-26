@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using GameDefs;
 
 namespace RoomGen
 {
@@ -12,6 +13,9 @@ namespace RoomGen
         [SerializeField] private List<RoomTemplate> roomTemplates = new List<RoomTemplate>();
 
         private List<RoomTemplate> _activePool;
+        private List<RoomTemplate> _poolNonSpawn;
+        private List<RoomTemplate> _poolNonSpawnNonCorridor;
+        private float[] _weightScratch;
 
         [Header("Generation Targets")]
         [SerializeField] private int desiredRoomCount = 40;
@@ -30,8 +34,10 @@ namespace RoomGen
         [SerializeField] private float overflowGrowthDamping = 0.6f;
 
         [Header("Doors")]
-        [Tooltip("DoorDef used when a connection doesn't specify a preferred door def on either room template.")]
-        [SerializeField] private string defaultDoorDefName = "BasicDoor";
+        [Tooltip("Single DoorDef used when a connection doesn't specify a preferred single door def on either room template.")]
+        [SerializeField] private string defaultSingleDoorDefName = "BasicDoor";
+        [Tooltip("Double DoorDef used when a connection doesn't specify a preferred double door def on either room template.")]
+        [SerializeField] private string defaultDoubleDoorDefName = "BasicDoubleDoor";
 
         [Header("Random")]
         [SerializeField] private bool useFixedSeed = false;
@@ -64,6 +70,8 @@ namespace RoomGen
             _openConnectors.Clear();
 
             _activePool = BuildTemplatePool();
+            _poolNonSpawn = _activePool.Where(t => !t.HasTag("spawn")).ToList();
+            _poolNonSpawnNonCorridor = _poolNonSpawn.Where(t => !t.HasTag("corridor")).ToList();
 
             var spawnTemplate = _activePool.FirstOrDefault(t => t.HasTag("spawn"));
             if (spawnTemplate == null)
@@ -114,33 +122,16 @@ namespace RoomGen
                     continue;
                 }
 
-                var newRoom = _grid.Stamp(placement.Value.template, placement.Value.origin, placement.Value.rotationDeg);
                 bool newIsCorridor = placement.Value.template.HasTag("corridor");
+                bool involvesCorridor = ownerRoom.template.HasTag("corridor") || newIsCorridor;
+
+                var newRoom = StampAndConnect(ownerRoom.template, targetRun, placement.Value, ownerRoom.id, involvesCorridor, run => _openConnectors.Add(run));
+
                 newRoom.corridorChainDepth = newIsCorridor
                     ? (ownerRoom.template.HasTag("corridor") ? ownerRoom.corridorChainDepth + 1 : 1)
                     : 0;
                 roomsPlaced++;
                 if (newIsCorridor) corridorsPlaced++;
-
-                bool involvesCorridor = ownerRoom.template.HasTag("corridor") || newIsCorridor;
-                string doorDef = PickDoorDef(ownerRoom.template, placement.Value.template);
-                _grid.ResolveConnection(placement.Value.overlapCells, targetRun.type, placement.Value.candidateRunType, _rng, doorDef,
-                    forceDoubleOverride: involvesCorridor);
-
-                targetRun.state = ConnectorState.Connected;
-                targetRun.connectedToRoomId = newRoom.id;
-
-                var overlapSet = new HashSet<Vector2Int>(placement.Value.overlapCells);
-                foreach (var run in newRoom.connectorRuns)
-                {
-                    bool isUsedRun = run.cells.Count == overlapSet.Count && run.cells.All(c => overlapSet.Contains(c));
-                    if (isUsedRun)
-                    {
-                        run.state = ConnectorState.Connected;
-                        run.connectedToRoomId = ownerRoom.id;
-                    }
-                    else _openConnectors.Add(run);
-                }
             }
 
             foreach (var run in _openConnectors)
@@ -149,16 +140,49 @@ namespace RoomGen
 
             ReviveDeadCorridorEnds();
             if (guaranteeDoorsOnConnectorOverlap) ResolveOrphanedConnectorOverlaps();
-            PerformReconnectionPass();
+            ReplaceOrphanedDoubleDoors();
 
             Debug.Log($"RoomGenerator: generated {roomsPlaced} room(s) (target was {desiredRoomCount}).");
         }
 
-        private string PickDoorDef(RoomTemplate a, RoomTemplate b)
+        private void PickDoorDefs(RoomTemplate a, RoomTemplate b, out string singleDoorDef, out string doubleDoorDef)
         {
-            if (!string.IsNullOrEmpty(a.preferredDoorDef)) return a.preferredDoorDef;
-            if (!string.IsNullOrEmpty(b.preferredDoorDef)) return b.preferredDoorDef;
-            return defaultDoorDefName;
+            singleDoorDef = !string.IsNullOrEmpty(a.preferredSingleDoorDef) ? a.preferredSingleDoorDef
+                : !string.IsNullOrEmpty(b.preferredSingleDoorDef) ? b.preferredSingleDoorDef
+                : defaultSingleDoorDefName;
+
+            doubleDoorDef = !string.IsNullOrEmpty(a.preferredDoubleDoorDef) ? a.preferredDoubleDoorDef
+                : !string.IsNullOrEmpty(b.preferredDoubleDoorDef) ? b.preferredDoubleDoorDef
+                : defaultDoubleDoorDefName;
+        }
+
+        private PlacedRoom StampAndConnect(RoomTemplate ownerTemplate, WorldConnectorRun targetRun, Placement placement, int ownerRoomId, bool forceDouble, System.Action<WorldConnectorRun> onUnusedRun)
+        {
+            var newRoom = _grid.Stamp(placement.template, placement.origin, placement.rotationDeg);
+
+            PickDoorDefs(ownerTemplate, placement.template, out string singleDoorDef, out string doubleDoorDef);
+            _grid.ResolveConnection(placement.overlapCells, targetRun.type, placement.candidateRunType, _rng, singleDoorDef, doubleDoorDef,
+                forceDoubleOverride: forceDouble);
+
+            targetRun.state = ConnectorState.Connected;
+            targetRun.connectedToRoomId = newRoom.id;
+
+            var overlapSet = new HashSet<Vector2Int>(placement.overlapCells);
+            foreach (var run in newRoom.connectorRuns)
+            {
+                bool isUsedRun = run.cells.Count == overlapSet.Count && run.cells.All(c => overlapSet.Contains(c));
+                if (isUsedRun)
+                {
+                    run.state = ConnectorState.Connected;
+                    run.connectedToRoomId = ownerRoomId;
+                }
+                else
+                {
+                    onUnusedRun(run);
+                }
+            }
+
+            return newRoom;
         }
 
         private List<RoomTemplate> BuildTemplatePool()
@@ -172,28 +196,6 @@ namespace RoomGen
             pool.AddRange(library);
             pool.AddRange(roomTemplates);
             return pool;
-        }
-
-        private void PerformReconnectionPass()
-        {
-            var pairs = new List<(PlacedRoom room, int neighborId)>();
-            foreach (var room in _grid.PlacedRooms)
-            {
-                var neighborIds = room.connectorRuns
-                    .Where(r => r.state == ConnectorState.Connected)
-                    .Select(r => r.connectedToRoomId)
-                    .Distinct();
-                foreach (var neighborId in neighborIds)
-                    pairs.Add((room, neighborId));
-            }
-
-            var roomsById = _grid.PlacedRooms.ToDictionary(r => r.id);
-
-            foreach (var (room, neighborId) in pairs)
-            {
-                if (!roomsById.TryGetValue(neighborId, out var neighbor)) continue;
-                TryResolveConnection(room, neighbor, chance: room.template.reconnectionChance);
-            }
         }
 
         private static List<List<Vector2Int>> SplitIntoContiguousSegments(List<Vector2Int> orderedCells)
@@ -229,15 +231,13 @@ namespace RoomGen
                     bool alreadyConnected = a.connectorRuns.Any(r => r.state == ConnectorState.Connected && r.connectedToRoomId == b.id);
                     if (alreadyConnected) continue;
 
-                    TryResolveConnection(a, b, chance: null);
+                    TryResolveConnection(a, b);
                 }
             }
         }
 
-        private bool TryResolveConnection(PlacedRoom a, PlacedRoom b, float? chance)
+        private bool TryResolveConnection(PlacedRoom a, PlacedRoom b)
         {
-            if (chance.HasValue && _rng.NextDouble() > chance.Value) return false;
-
             bool bothCorridors = a.template.HasTag("corridor") && b.template.HasTag("corridor");
             bool involvesCorridor = a.template.HasTag("corridor") || b.template.HasTag("corridor");
 
@@ -249,8 +249,7 @@ namespace RoomGen
                 {
                     if (bothCorridors && runB.type != ConnectorType.AlwaysDouble) continue;
 
-                    var bSet = new HashSet<Vector2Int>(runB.cells);
-                    var overlapOrdered = runA.cells.Where(c => bSet.Contains(c)).ToList();
+                    var overlapOrdered = runA.cells.Where(c => runB.CellSet.Contains(c)).ToList();
                     if (overlapOrdered.Count == 0) continue;
 
                     foreach (var segment in SplitIntoContiguousSegments(overlapOrdered))
@@ -263,9 +262,8 @@ namespace RoomGen
                         {
                             if (subSegment.Count == 0) continue;
 
-                            string doorDef = PickDoorDef(a.template, b.template);
-                            _grid.ResolveConnection(subSegment, runA.type, runB.type, _rng, doorDef,
-                                overrideDoubleChance: chance.HasValue ? a.template.reconnectionDoubleChance : (float?)null,
+                            PickDoorDefs(a.template, b.template, out string singleDoorDef, out string doubleDoorDef);
+                            _grid.ResolveConnection(subSegment, runA.type, runB.type, _rng, singleDoorDef, doubleDoorDef,
                                 forceDoubleOverride: involvesCorridor);
 
                             runA.state = ConnectorState.Connected;
@@ -293,30 +291,38 @@ namespace RoomGen
                 var placement = TryFindPlacement(run, preferCorridor: false, room.corridorChainDepth, excludeCorridorCandidates: true);
                 if (placement == null) continue;
 
-                var newRoom = _grid.Stamp(placement.Value.template, placement.Value.origin, placement.Value.rotationDeg);
+                var newRoom = StampAndConnect(room.template, run, placement.Value, room.id, forceDouble: true, onUnusedRun: SealRun);
                 newRoom.corridorChainDepth = 0;
+            }
+        }
 
-                string doorDef = PickDoorDef(room.template, placement.Value.template);
-                _grid.ResolveConnection(placement.Value.overlapCells, run.type, placement.Value.candidateRunType, _rng, doorDef,
-                    forceDoubleOverride: true);
+        private void ReplaceOrphanedDoubleDoors()
+        {
+            var doorCells = _grid.Cells.Where(kvp => kvp.Value.normal == NormalType.Door).Select(kvp => kvp.Key).ToList();
+            var processed = new HashSet<Vector2Int>();
 
-                run.state = ConnectorState.Connected;
-                run.connectedToRoomId = newRoom.id;
+            foreach (var cell in doorCells)
+            {
+                if (processed.Contains(cell)) continue;
 
-                var overlapSet = new HashSet<Vector2Int>(placement.Value.overlapCells);
-                foreach (var newRun in newRoom.connectorRuns)
+                var data = _grid.GetCell(cell);
+                var doorDef = DefDatabase.Get<DoorDef>(data.doorDef);
+                if (doorDef == null || !doorDef.IsDoubleDoor)
                 {
-                    bool isUsedRun = newRun.cells.Count == overlapSet.Count && newRun.cells.All(c => overlapSet.Contains(c));
-                    if (isUsedRun)
-                    {
-                        newRun.state = ConnectorState.Connected;
-                        newRun.connectedToRoomId = room.id;
-                    }
-                    else
-                    {
-                        SealRun(newRun);
-                    }
+                    processed.Add(cell);
+                    continue;
                 }
+
+                if (_grid.TryFindDoorPartner(cell, data.doorDef, out var partner))
+                {
+                    processed.Add(cell);
+                    processed.Add(partner);
+                    continue;
+                }
+
+                string fallback = doorDef.SingleDoorFallback != null ? doorDef.SingleDoorFallback.DefName : defaultSingleDoorDefName;
+                _grid.SetNormal(cell, NormalType.Door, fallback);
+                processed.Add(cell);
             }
         }
 
@@ -349,9 +355,7 @@ namespace RoomGen
 
             bool corridorCandidatesAllowed = !excludeCorridorCandidates && (!ownerIsCorridor || targetRun.type == ConnectorType.AlwaysDouble);
 
-            var candidates = _activePool.Where(t => !t.HasTag("spawn")).ToList();
-            if (!corridorCandidatesAllowed)
-                candidates = candidates.Where(t => !t.HasTag("corridor")).ToList();
+            var candidates = corridorCandidatesAllowed ? _poolNonSpawn : _poolNonSpawnNonCorridor;
             if (candidates.Count == 0) return null;
 
             int attempts = 0;
@@ -420,8 +424,10 @@ namespace RoomGen
 
         private RoomTemplate PickWeighted(List<RoomTemplate> candidates, bool preferCorridor, int ownerCorridorChainDepth)
         {
+            if (_weightScratch == null || _weightScratch.Length < candidates.Count)
+                _weightScratch = new float[candidates.Count];
+
             float total = 0f;
-            var weights = new float[candidates.Count];
             for (int i = 0; i < candidates.Count; i++)
             {
                 bool candidateIsCorridor = candidates[i].HasTag("corridor");
@@ -439,7 +445,7 @@ namespace RoomGen
                     }
                 }
 
-                weights[i] = w;
+                _weightScratch[i] = w;
                 total += w;
             }
 
@@ -447,7 +453,7 @@ namespace RoomGen
             double cumulative = 0;
             for (int i = 0; i < candidates.Count; i++)
             {
-                cumulative += weights[i];
+                cumulative += _weightScratch[i];
                 if (roll <= cumulative) return candidates[i];
             }
             return candidates[candidates.Count - 1];
