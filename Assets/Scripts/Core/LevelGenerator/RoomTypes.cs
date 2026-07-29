@@ -1,4 +1,5 @@
 using System;
+using GameDefs;
 
 namespace RoomGen
 {
@@ -46,22 +47,13 @@ namespace RoomGen
         Double2x1 = 2,
     }
 
-
     [Serializable]
     public struct PropPlacement
     {
         public string propId;
         public int cellX;
         public int cellY;
-        public PropRotation rotation;
-
-        public enum PropRotation
-        {
-            North = 0,
-            East = 1,
-            South = 2,
-            West = 3,
-        }
+        public PropFacing facing;
     }
 
     [Serializable]

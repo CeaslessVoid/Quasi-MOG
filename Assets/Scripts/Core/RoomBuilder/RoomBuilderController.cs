@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using GameDefs;
-using static RoomGen.PropPlacement;
 
 namespace RoomGen
 {
@@ -26,12 +25,15 @@ namespace RoomGen
         private string _doorDefBrush;
         private string _floorDefBrush;
 
-        private string _currentPropId = "prop_crate";
-        private PropRotation _currentPropRotation = PropRotation.North;
+        private string _currentPropId;
+        private PropFacing _currentPropFacing = PropFacing.North;
         private Vector2Int? _selectedPropCell;
 
         private Vector2Int? _lastPaintCellLeft;
         private Vector2Int? _lastPaintCellRight;
+
+        private readonly List<(Vector2Int cell, bool valid)> _singleCellScratch = new List<(Vector2Int, bool)>(1);
+        private readonly List<(Vector2Int cell, bool valid)> _propPreviewScratch = new List<(Vector2Int, bool)>();
 
         private string _newWidthField = "5";
         private string _newHeightField = "5";
@@ -58,6 +60,7 @@ namespace RoomGen
             if (DefDatabase.All<WallDef>().Count > 0) _wallDefBrush = DefDatabase.All<WallDef>()[0].DefName;
             if (DefDatabase.All<DoorDef>().Count > 0) _doorDefBrush = DefDatabase.All<DoorDef>()[0].DefName;
             if (DefDatabase.All<FloorDef>().Count > 0) _floorDefBrush = DefDatabase.All<FloorDef>()[0].DefName;
+            if (DefDatabase.All<PropDef>().Count > 0) _currentPropId = DefDatabase.All<PropDef>()[0].DefName;
         }
 
         private bool IsTypingInField => GUIUtility.keyboardControl != 0;
@@ -65,7 +68,7 @@ namespace RoomGen
         private void Update()
         {
             if (_state == null || targetCamera == null) return;
-            if (Input.mousePosition.x < panelWidth) return;
+            if (Input.mousePosition.x < panelWidth) { visuals.ClearPreview(); return; }
 
             var mouseWorld = targetCamera.ScreenToWorldPoint(Input.mousePosition);
             mouseWorld.z = 0f;
@@ -75,8 +78,11 @@ namespace RoomGen
             {
                 _lastPaintCellLeft = null;
                 _lastPaintCellRight = null;
+                visuals.ClearPreview();
                 return;
             }
+
+            UpdatePreview(cx, cy);
 
             if (_tool == BuilderTool.Prop)
             {
@@ -104,6 +110,133 @@ namespace RoomGen
             }
             else _lastPaintCellRight = null;
         }
+
+        private void UpdatePreview(int cx, int cy)
+        {
+            switch (_tool)
+            {
+                case BuilderTool.Floor: PreviewFloor(cx, cy); break;
+                case BuilderTool.Normal: PreviewNormal(cx, cy); break;
+                case BuilderTool.Connector: PreviewConnector(cx, cy); break;
+                case BuilderTool.Prop: PreviewProp(cx, cy); break;
+            }
+        }
+
+        private void PreviewFloor(int x, int y)
+        {
+            var cell = new Vector2Int(x, y);
+            _singleCellScratch.Clear();
+            _singleCellScratch.Add((cell, true));
+
+            if (Input.GetMouseButton(1))
+            {
+                visuals.ShowPreview(_singleCellScratch, null, Color.white, cell, cell, false);
+                return;
+            }
+
+            Sprite sprite;
+            Color color;
+            if (_floorBrushType == FloorType.Floor)
+            {
+                var def = DefDatabase.Get<FloorDef>(_floorDefBrush);
+                if (def != null && def.HasTexture) { sprite = def.Sprite; color = def.TintColor; }
+                else { sprite = DefVisualUtility.MissingSprite; color = Color.white; }
+            }
+            else if (_floorBrushType == FloorType.Water)
+            {
+                sprite = DefVisualUtility.SolidSprite;
+                color = new Color(0.2f, 0.4f, 0.9f);
+            }
+            else
+            {
+                sprite = DefVisualUtility.SolidSprite;
+                color = new Color(1f, 1f, 1f, 0.15f);
+            }
+
+            visuals.ShowPreview(_singleCellScratch, sprite, color, cell, cell, false);
+        }
+
+        private void PreviewNormal(int x, int y)
+        {
+            var cell = new Vector2Int(x, y);
+            _singleCellScratch.Clear();
+            _singleCellScratch.Add((cell, true));
+
+            if (Input.GetMouseButton(1) || _normalBrushType == NormalType.Empty)
+            {
+                visuals.ShowPreview(_singleCellScratch, null, Color.white, cell, cell, false);
+                return;
+            }
+
+            bool n = IsWallLikeAt(x, y + 1);
+            bool e = IsWallLikeAt(x + 1, y);
+            bool s = IsWallLikeAt(x, y - 1);
+            bool w = IsWallLikeAt(x - 1, y);
+
+            if (_normalBrushType == NormalType.Wall)
+            {
+                int bitmask = WallAtlas.ComputeBitmask(n, e, s, w);
+                var def = DefDatabase.Get<WallDef>(_wallDefBrush);
+                Sprite sprite = def != null && def.HasTexture ? def.GetSprite(bitmask) : DefVisualUtility.MissingSprite;
+                Color color = def != null && def.HasTexture ? def.TintColor : Color.white;
+                visuals.ShowPreview(_singleCellScratch, sprite, color, cell, cell, false);
+            }
+            else
+            {
+                bool northSouthOpen = !n && !s;
+                bool eastWestOpen = !e && !w;
+                bool isNorthOrientation = !(eastWestOpen && !northSouthOpen);
+
+                var def = DefDatabase.Get<DoorDef>(_doorDefBrush);
+                Sprite sprite = def != null ? (isNorthOrientation ? def.NorthSprite : def.EastSprite) : null;
+                Color color = def != null ? def.TintColor : new Color(0.65f, 0.4f, 0.1f, 1f);
+                if (sprite == null) sprite = DefVisualUtility.MissingSprite;
+                visuals.ShowPreview(_singleCellScratch, sprite, color, cell, cell, false);
+            }
+        }
+
+        private void PreviewConnector(int x, int y)
+        {
+            var cell = new Vector2Int(x, y);
+            bool valid = _state.GetNormal(x, y) == NormalType.Wall;
+            _singleCellScratch.Clear();
+            _singleCellScratch.Add((cell, valid));
+            visuals.ShowPreview(_singleCellScratch, null, Color.white, cell, cell, false);
+        }
+
+        private void PreviewProp(int x, int y)
+        {
+            if (Input.GetMouseButton(1)) { visuals.ClearPreview(); return; }
+            if (string.IsNullOrEmpty(_currentPropId)) { visuals.ClearPreview(); return; }
+
+            var def = DefDatabase.Get<PropDef>(_currentPropId);
+            if (def == null) { visuals.ClearPreview(); return; }
+
+            var candidate = new PropPlacement { propId = _currentPropId, cellX = x, cellY = y, facing = _currentPropFacing };
+            _propPreviewScratch.Clear();
+            _propPreviewScratch.AddRange(PropPlacementValidator.Evaluate(_state, candidate, def));
+
+            if (!PropPlacementUtility.GetFootprintBounds(_propPreviewScratch.ConvertAll(e => e.cell), out var min, out var max))
+            {
+                visuals.ClearPreview();
+                return;
+            }
+
+            if (def.Category == PropCategory.Wall)
+            {
+                var offset = PropPlacementUtility.GetWallMountOffset(_currentPropFacing);
+                min += offset;
+                max += offset;
+            }
+
+            Sprite sprite = def.HasTexture ? def.GetSprite(_currentPropFacing) : DefVisualUtility.MissingSprite;
+            Color color = def.HasTexture ? def.TintColor : DefVisualUtility.MissingColor;
+            bool flip = _currentPropFacing == PropFacing.West;
+
+            visuals.ShowPreview(_propPreviewScratch, sprite, color, min, max, flip);
+        }
+
+        private bool IsWallLikeAt(int x, int y) => _state.InBounds(x, y) && _state.GetNormal(x, y) == NormalType.Wall;
 
         private void PaintLine(Vector2Int from, Vector2Int to, bool erase)
         {
@@ -169,29 +302,38 @@ namespace RoomGen
 
         private void PlaceOrSelectProp(int x, int y)
         {
-            var existing = _state.GetPropAt(x, y);
+            var cell = new Vector2Int(x, y);
+            var existing = PropPlacementUtility.FindPlacementAtCell(_state, cell);
             if (existing.HasValue)
             {
-                _selectedPropCell = new Vector2Int(x, y);
+                _selectedPropCell = new Vector2Int(existing.Value.cellX, existing.Value.cellY);
                 return;
             }
 
-            var prop = new PropPlacement
+            if (string.IsNullOrEmpty(_currentPropId)) { _statusMessage = "Select a prop def first."; return; }
+            var def = DefDatabase.Get<PropDef>(_currentPropId);
+            if (def == null) { _statusMessage = "Unknown prop def."; return; }
+
+            var candidate = new PropPlacement { propId = _currentPropId, cellX = x, cellY = y, facing = _currentPropFacing };
+            if (!PropPlacementValidator.IsValid(_state, candidate, def, out string reason))
             {
-                propId = string.IsNullOrEmpty(_currentPropId) ? "prop" : _currentPropId,
-                cellX = x,
-                cellY = y,
-                rotation = _currentPropRotation
-            };
-            _state.SetProp(prop);
-            visuals.RefreshProp(prop);
-            _selectedPropCell = new Vector2Int(x, y);
+                _statusMessage = reason;
+                return;
+            }
+
+            _state.SetProp(candidate);
+            visuals.RefreshProp(candidate);
+            _selectedPropCell = cell;
         }
 
         private void RemovePropAt(int x, int y)
         {
-            if (_state.RemoveProp(x, y)) visuals.RemoveProp(new Vector2Int(x, y));
-            if (_selectedPropCell == new Vector2Int(x, y)) _selectedPropCell = null;
+            var hit = PropPlacementUtility.FindPlacementAtCell(_state, new Vector2Int(x, y));
+            if (!hit.HasValue) return;
+
+            var origin = new Vector2Int(hit.Value.cellX, hit.Value.cellY);
+            if (_state.RemoveProp(origin.x, origin.y)) visuals.RemoveProp(origin);
+            if (_selectedPropCell == origin) _selectedPropCell = null;
         }
 
         private void RotateSelectedProp()
@@ -202,7 +344,7 @@ namespace RoomGen
             if (!existing.HasValue) return;
 
             var p = existing.Value;
-            p.rotation = p.rotation == PropRotation.West ? PropRotation.North : p.rotation + 1;
+            p.facing = (PropFacing)(((int)p.facing + 1) % 4);
             _state.SetProp(p);
             visuals.RefreshProp(p);
         }
@@ -419,10 +561,10 @@ namespace RoomGen
                     DrawEnumBrushButtons(new[] { ConnectorType.None, ConnectorType.Normal, ConnectorType.Restricted, ConnectorType.AlwaysDouble }, _connectorBrush, v => _connectorBrush = v);
                     break;
                 case BuilderTool.Prop:
-                    GUILayout.Label("Prop Id");
-                    _currentPropId = GUILayout.TextField(_currentPropId);
-                    GUILayout.Label($"Placement Rotation: {_currentPropRotation}°");
-                    if (GUILayout.Button("Rotate Pending +90")) _currentPropRotation = _currentPropRotation == PropRotation.West ? PropRotation.North : _currentPropRotation + 1;
+                    GUILayout.Label("Prop Def");
+                    DrawDefBrushButtons(DefDatabase.All<PropDef>(), _currentPropId, v => _currentPropId = v);
+                    GUILayout.Label($"Facing: {_currentPropFacing}");
+                    if (GUILayout.Button("Rotate Pending +90")) _currentPropFacing = (PropFacing)(((int)_currentPropFacing + 1) % 4);
                     GUILayout.Label("Click: place/select   Right-click: delete   R: rotate selected");
                     break;
             }
@@ -435,6 +577,7 @@ namespace RoomGen
             {
                 _tool = tool;
                 visuals.SetConnectorOverlayVisible(_tool == BuilderTool.Connector);
+                visuals.ClearPreview();
             }
             GUI.backgroundColor = Color.white;
         }
@@ -460,7 +603,7 @@ namespace RoomGen
             {
                 bool selected = def.DefName == current;
 
-                    GUI.backgroundColor = selected ? Color.cyan : Color.white;
+                GUI.backgroundColor = selected ? Color.cyan : Color.white;
                 if (GUILayout.Button(def.DefName)) onPick(def.DefName);
             }
             GUI.backgroundColor = Color.white;

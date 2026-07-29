@@ -6,10 +6,8 @@ namespace GameDefs
     public class FloorDef : Def
     {
         [SerializeField] private Sprite sprite;
-        [SerializeField] private Color tintColor = Color.white;
 
         public Sprite Sprite => sprite;
-        public Color TintColor => tintColor;
         public bool HasTexture => sprite != null;
     }
 }

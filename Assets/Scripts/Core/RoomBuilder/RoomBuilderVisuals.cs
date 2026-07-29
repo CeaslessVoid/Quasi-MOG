@@ -6,6 +6,9 @@ namespace RoomGen
 {
     public class RoomBuilderVisuals : RoomVisualsBase
     {
+        private static readonly Color ValidPreviewColor = new Color(0.25f, 1f, 0.25f, 0.35f);
+        private static readonly Color InvalidPreviewColor = new Color(1f, 0.2f, 0.2f, 0.4f);
+
         private Transform _root;
         private Transform _gridRoot;
 
@@ -15,6 +18,9 @@ namespace RoomGen
         private readonly Dictionary<Vector2Int, SpriteRenderer> _connectorRenderers = new Dictionary<Vector2Int, SpriteRenderer>();
         private readonly Dictionary<Vector2Int, ConnectorType> _lastConnectorType = new Dictionary<Vector2Int, ConnectorType>();
         private readonly Dictionary<Vector2Int, PropVisual> _propVisuals = new Dictionary<Vector2Int, PropVisual>();
+
+        private readonly List<SpriteRenderer> _previewOverlayPool = new List<SpriteRenderer>();
+        private SpriteRenderer _previewGhost;
 
         private bool _connectorOverlayVisible;
 
@@ -72,6 +78,8 @@ namespace RoomGen
             _connectorRenderers.Clear();
             _lastConnectorType.Clear();
             _propVisuals.Clear();
+            _previewOverlayPool.Clear();
+            _previewGhost = null;
         }
 
         private void CreateCellRenderers(Vector2Int cell)
@@ -251,7 +259,7 @@ namespace RoomGen
             return state.GetNormal(x, y) == NormalType.Wall;
         }
 
-        private static bool IsNorthOrientedDoor(RoomData state, int x, int y)
+        public static bool IsNorthOrientedDoor(RoomData state, int x, int y)
         {
             bool northSouthOpen = !IsWallLike(state, x, y + 1) && !IsWallLike(state, x, y - 1);
             bool eastWestOpen = !IsWallLike(state, x + 1, y) && !IsWallLike(state, x - 1, y);
@@ -263,57 +271,69 @@ namespace RoomGen
 
         public void RefreshProp(PropPlacement p)
         {
-            var cell = new Vector2Int(p.cellX, p.cellY);
-            if (!_propVisuals.TryGetValue(cell, out var pv))
+            var origin = new Vector2Int(p.cellX, p.cellY);
+            var def = DefDatabase.Get<PropDef>(p.propId);
+
+            if (!_propVisuals.TryGetValue(origin, out var pv))
             {
-                pv = CreatePropVisual(cell);
-                _propVisuals[cell] = pv;
+                pv = CreatePropVisual(origin);
+                _propVisuals[origin] = pv;
             }
-            pv.body.color = ColorForPropId(p.propId);
+
+            int width = def != null ? def.Width : 1;
+            int height = def != null ? def.Height : 1;
+            var footprint = PropPlacementUtility.GetFootprintCells(origin, width, height, p.facing);
+            PropPlacementUtility.GetFootprintBounds(footprint, out var min, out var max);
+
+            if (def != null && def.Category == PropCategory.Wall)
+            {
+                var offset = PropPlacementUtility.GetWallMountOffset(p.facing);
+                min += offset;
+                max += offset;
+            }
+
+            float cx = (min.x + max.x) * 0.5f * cellSize;
+            float cy = (min.y + max.y) * 0.5f * cellSize;
+            int w = max.x - min.x + 1;
+            int h = max.y - min.y + 1;
+            bool flip = p.facing == PropFacing.West;
+            float depth = def != null && def.Category == PropCategory.Decorative ? -0.25f : -0.2f;
+
+            pv.root.localPosition = new Vector3(cx, cy, depth);
+            pv.body.transform.localScale = new Vector3((flip ? -1f : 1f) * w * cellSize, h * cellSize, 1f);
+
+            if (def != null && def.HasTexture)
+            {
+                pv.body.sprite = def.GetSprite(p.facing);
+                pv.body.color = def.TintColor;
+            }
+            else
+            {
+                pv.body.sprite = DefVisualUtility.MissingSprite;
+                pv.body.color = DefVisualUtility.MissingColor;
+            }
         }
 
-        private PropVisual CreatePropVisual(Vector2Int cell)
+        private PropVisual CreatePropVisual(Vector2Int origin)
         {
-            var root = new GameObject($"Prop_{cell.x}_{cell.y}").transform;
+            var root = new GameObject($"Prop_{origin.x}_{origin.y}").transform;
             root.SetParent(_root, false);
-            root.localPosition = new Vector3(cell.x * cellSize, cell.y * cellSize, -0.2f);
 
             var bodyGO = new GameObject("Body");
             bodyGO.transform.SetParent(root, false);
-            bodyGO.transform.localScale = Vector3.one * cellSize * 0.5f;
             var body = bodyGO.AddComponent<SpriteRenderer>();
-            body.sprite = DefVisualUtility.SolidSprite;
             body.sortingOrder = 10;
-
-            var facingGO = new GameObject("Facing");
-            facingGO.transform.SetParent(root, false);
-            facingGO.transform.localPosition = new Vector3(0f, cellSize * 0.3f, 0f);
-            facingGO.transform.localScale = new Vector3(cellSize * 0.12f, cellSize * 0.35f, 1f);
-            var facing = facingGO.AddComponent<SpriteRenderer>();
-            facing.sprite = DefVisualUtility.SolidSprite;
-            facing.color = Color.white;
-            facing.sortingOrder = 11;
 
             return new PropVisual { root = root, body = body };
         }
 
-        public void RemoveProp(Vector2Int cell)
+        public void RemoveProp(Vector2Int origin)
         {
-            if (_propVisuals.TryGetValue(cell, out var pv))
+            if (_propVisuals.TryGetValue(origin, out var pv))
             {
                 Destroy(pv.root.gameObject);
-                _propVisuals.Remove(cell);
+                _propVisuals.Remove(origin);
             }
-        }
-
-        private static Color ColorForPropId(string id)
-        {
-            int hash = string.IsNullOrEmpty(id) ? 0 : id.GetHashCode();
-            var rnd = new System.Random(hash);
-            return new Color(
-                (float)rnd.NextDouble() * 0.6f + 0.4f,
-                (float)rnd.NextDouble() * 0.6f + 0.4f,
-                (float)rnd.NextDouble() * 0.6f + 0.4f);
         }
 
         public bool TryWorldToCell(Vector3 world, out int x, out int y)
@@ -322,6 +342,77 @@ namespace RoomGen
             x = Mathf.RoundToInt(local.x / cellSize);
             y = Mathf.RoundToInt(local.y / cellSize);
             return true;
+        }
+
+        private SpriteRenderer GetOverlay(int index)
+        {
+            while (_previewOverlayPool.Count <= index)
+            {
+                var go = new GameObject($"PreviewOverlay_{_previewOverlayPool.Count}");
+                go.transform.SetParent(_root, false);
+                go.transform.localScale = Vector3.one * cellSize;
+                var sr = go.AddComponent<SpriteRenderer>();
+                sr.sprite = DefVisualUtility.SolidSprite;
+                sr.sortingOrder = 20;
+                sr.enabled = false;
+                _previewOverlayPool.Add(sr);
+            }
+            return _previewOverlayPool[index];
+        }
+
+        private void EnsureGhost()
+        {
+            if (_previewGhost != null) return;
+            var go = new GameObject("PreviewGhost");
+            go.transform.SetParent(_root, false);
+            _previewGhost = go.AddComponent<SpriteRenderer>();
+            _previewGhost.sortingOrder = 21;
+            _previewGhost.enabled = false;
+        }
+
+        public void ClearPreview()
+        {
+            foreach (var sr in _previewOverlayPool) sr.enabled = false;
+            if (_previewGhost != null) _previewGhost.enabled = false;
+        }
+
+        public void ShowPreview(IReadOnlyList<(Vector2Int cell, bool valid)> footprint, Sprite ghostSprite, Color ghostColor, Vector2Int boundsMin, Vector2Int boundsMax, bool flipGhostX)
+        {
+            EnsureGhost();
+
+            int i = 0;
+            if (footprint != null)
+            {
+                for (; i < footprint.Count; i++)
+                {
+                    var sr = GetOverlay(i);
+                    var c = footprint[i].cell;
+                    sr.transform.localPosition = new Vector3(c.x * cellSize, c.y * cellSize, -0.3f);
+                    sr.color = footprint[i].valid ? ValidPreviewColor : InvalidPreviewColor;
+                    sr.enabled = true;
+                }
+            }
+            for (; i < _previewOverlayPool.Count; i++) _previewOverlayPool[i].enabled = false;
+
+            if (ghostSprite != null)
+            {
+                _previewGhost.enabled = true;
+                _previewGhost.sprite = ghostSprite;
+                var color = ghostColor;
+                color.a *= 0.55f;
+                _previewGhost.color = color;
+
+                float cx = (boundsMin.x + boundsMax.x) * 0.5f * cellSize;
+                float cy = (boundsMin.y + boundsMax.y) * 0.5f * cellSize;
+                int w = boundsMax.x - boundsMin.x + 1;
+                int h = boundsMax.y - boundsMin.y + 1;
+                _previewGhost.transform.localPosition = new Vector3(cx, cy, -0.25f);
+                _previewGhost.transform.localScale = new Vector3((flipGhostX ? -1f : 1f) * w * cellSize, h * cellSize, 1f);
+            }
+            else
+            {
+                _previewGhost.enabled = false;
+            }
         }
     }
 }
