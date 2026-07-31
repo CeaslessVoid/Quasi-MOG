@@ -13,7 +13,9 @@ MonoBehaviour:
   m_Name: SteelWall
   m_EditorClassIdentifier: Assembly-CSharp::GameDefs.WallDef
   defName: SteelWall
-  textureElement: {fileID: 11400000, guid: f0c6620768ee8f846a85ad389202cbd1, type: 2}
   tintColor: {r: 0.4117647, g: 0.4117647, b: 0.4117647, a: 1}
+  chanceToBlockBullet: 1
+  blocksVision: 1
+  maxHp: 500
   physicsMaterial: {fileID: 0}
-  blocksProjectiles: 1
+  textureElement: {fileID: 11400000, guid: f0c6620768ee8f846a85ad389202cbd1, type: 2}

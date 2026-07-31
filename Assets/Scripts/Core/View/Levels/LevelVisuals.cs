@@ -25,6 +25,10 @@ namespace RoomGen
         private readonly HashSet<Vector2Int> _processedDoorCells = new HashSet<Vector2Int>();
         private const int DoorSortingOrder = 2;
 
+        private Transform _propRoot;
+        private const int PropSortingOrder = 3;
+        private const int PropDecorativeSortingOrder = 4;
+
         private readonly Dictionary<FloorDef, Tile> _floorTileCache = new Dictionary<FloorDef, Tile>();
         private readonly Dictionary<(WallDef, int), Tile> _wallTileCache = new Dictionary<(WallDef, int), Tile>();
 
@@ -49,6 +53,9 @@ namespace RoomGen
             _doorRoot = new GameObject("Doors").transform;
             _doorRoot.SetParent(_root, false);
 
+            _propRoot = new GameObject("Props").transform;
+            _propRoot.SetParent(_root, false);
+
             _waterTile = BuildSolidTile(new Color(0.2f, 0.4f, 0.9f));
             _missingFloorTile = BuildSolidTile(Color.white, DefVisualUtility.MissingSprite);
             _missingWallTile = BuildSolidTile(Color.white, DefVisualUtility.MissingSprite);
@@ -71,6 +78,9 @@ namespace RoomGen
                         RefreshCell(grid, world);
                     }
                 }
+
+                foreach (var prop in room.props)
+                    SpawnProp(prop);
             }
         }
 
@@ -83,6 +93,9 @@ namespace RoomGen
 
             for (int i = _doorRoot.childCount - 1; i >= 0; i--)
                 Destroy(_doorRoot.GetChild(i).gameObject);
+
+            for (int i = _propRoot.childCount - 1; i >= 0; i--)
+                Destroy(_propRoot.GetChild(i).gameObject);
 
             _doorsByCell.Clear();
             _processedDoorCells.Clear();
@@ -186,7 +199,6 @@ namespace RoomGen
 
             Sprite baseSprite = def != null ? (isNorthOrientation ? def.NorthSprite : def.EastSprite) : null;
             if (baseSprite == null) baseSprite = _missingDoorSprite;
-            Color tint = def != null ? def.TintColor : Color.white;
 
             Vector3 axis = isNorthOrientation ? Vector3.right : Vector3.up;
             float leafASign = isNorthOrientation ? -1f : 1f;
@@ -198,8 +210,8 @@ namespace RoomGen
             Vector3 leafAPos = leafAOpenDirection * leafPositionOffset;
             Vector3 leafBPos = -leafAPos;
 
-            var leafA = CreateLeaf(go.transform, "LeafA", baseSprite, tint, leafAPos, Vector3.one);
-            var leafB = CreateLeaf(go.transform, "LeafB", baseSprite, tint, leafBPos, mirrorScale);
+            var leafA = CreateLeaf(go.transform, "LeafA", baseSprite, def, leafAPos, Vector3.one);
+            var leafB = CreateLeaf(go.transform, "LeafB", baseSprite, def, leafBPos, mirrorScale);
 
             var doorInstance = go.AddComponent<DoorInstance>();
             doorInstance.Configure(def, leafA, leafB, leafAOpenDirection, leafBOpenDirection, slideDistance);
@@ -208,7 +220,7 @@ namespace RoomGen
                 _doorsByCell[cell] = doorInstance;
         }
 
-        private SpriteRenderer CreateLeaf(Transform parent, string name, Sprite sprite, Color color, Vector3 localPos, Vector3 localScale)
+        private SpriteRenderer CreateLeaf(Transform parent, string name, Sprite sprite, Def def, Vector3 localPos, Vector3 localScale)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
@@ -217,13 +229,56 @@ namespace RoomGen
 
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = sprite;
-            sr.color = color;
             sr.sortingOrder = DoorSortingOrder;
+
+            if (def != null) DefTintRenderer.Apply(sr, def);
+            else DefTintRenderer.ApplyFlatTint(sr, Color.white);
+
             return sr;
         }
 
         private Vector3 CellCenter(Vector2Int cell) => new Vector3((cell.x + 0.5f) * cellSize, (cell.y + 0.5f) * cellSize, 0f);
 
+        private void SpawnProp(PlacedProp p)
+        {
+            var def = DefDatabase.Get<PropDef>(p.propId);
+            var category = def != null ? def.Category : PropCategory.Normal;
+            if (!PropPlacementUtility.GetRenderBounds(p.worldCells, category, p.worldFacing, out var min, out var max)) return;
+
+            int w = max.x - min.x + 1;
+            int h = max.y - min.y + 1;
+            bool flip = p.worldFacing == PropFacing.West;
+
+            var go = new GameObject(string.IsNullOrEmpty(p.propId) ? "Prop" : p.propId);
+            go.transform.SetParent(_propRoot, false);
+            go.transform.localPosition = Vector3.Lerp(CellCenter(min), CellCenter(max), 0.5f);
+
+            var rb = go.AddComponent<Rigidbody2D>();
+            rb.bodyType = RigidbodyType2D.Static;
+
+            var collider = go.AddComponent<BoxCollider2D>();
+            collider.size = new Vector2(w * cellSize, h * cellSize);
+            if (def != null && def.PhysicsMaterial != null) collider.sharedMaterial = def.PhysicsMaterial;
+
+            var spriteGO = new GameObject("Sprite");
+            spriteGO.transform.SetParent(go.transform, false);
+
+            var sr = spriteGO.AddComponent<SpriteRenderer>();
+            sr.sortingOrder = category == PropCategory.Decorative ? PropDecorativeSortingOrder : PropSortingOrder;
+
+            Sprite sprite = def != null && def.HasTexture ? def.GetSprite(p.worldFacing) : DefVisualUtility.MissingSprite;
+            sr.sprite = sprite;
+
+            if (def != null && def.HasTexture)
+                DefTintRenderer.Apply(sr, def.TintColor, def.SecondaryTintColor, def.GetMask(p.worldFacing));
+            else
+                DefTintRenderer.ApplyFlatTint(sr, DefVisualUtility.MissingColor);
+
+            var fitSize = PropSpriteUtility.GetUniformFitSize(sprite, w * cellSize, h * cellSize);
+            spriteGO.transform.localScale = new Vector3((flip ? -1f : 1f) * fitSize.x, fitSize.y, 1f);
+
+            go.AddComponent<PropInstance>().Configure(def);
+        }
         private WallLayer GetOrCreateWallLayer(PhysicsMaterial2D material)
         {
             if (material == null)

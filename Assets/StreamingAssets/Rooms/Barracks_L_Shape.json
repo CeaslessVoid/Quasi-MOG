@@ -8,6 +8,7 @@
     ],
     "zoneTags": [],
     "floorLayer": [
+        0,
         1,
         1,
         1,
@@ -21,8 +22,7 @@
         1,
         1,
         1,
-        1,
-        1,
+        0,
         1,
         1,
         1,
@@ -998,6 +998,7 @@
         ""
     ],
     "floorDefLayer": [
+        "",
         "ConcreteTile",
         "ConcreteTile",
         "ConcreteTile",
@@ -1011,8 +1012,7 @@
         "ConcreteTile",
         "ConcreteTile",
         "ConcreteTile",
-        "ConcreteTile",
-        "ConcreteTile",
+        "",
         "ConcreteTile",
         "ConcreteTile",
         "ConcreteTile",
@@ -1201,7 +1201,5 @@
     "desiredConnections": 2,
     "extraConnectionChance": 0.15000000596046449,
     "chanceToConnectWhenBelowTarget": 0.8999999761581421,
-    "selectionWeight": 0.5,
-    "reconnectionChance": 0.20000000298023225,
-    "reconnectionDoubleChance": 0.5
+    "selectionWeight": 0.5
 }

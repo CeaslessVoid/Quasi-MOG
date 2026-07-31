@@ -34,6 +34,9 @@ namespace GameDefs
         [SerializeField] private Sprite northSprite;
         [SerializeField] private Sprite southSprite;
         [SerializeField] private Sprite eastSprite;
+        [SerializeField] private Texture2D northMask;
+        [SerializeField] private Texture2D southMask;
+        [SerializeField] private Texture2D eastMask;
 
         public PropCategory Category => category;
         public int Width => Mathf.Max(1, width);
@@ -49,6 +52,15 @@ namespace GameDefs
             PropFacing.East => eastSprite,
             PropFacing.West => eastSprite,
             _ => northSprite
+        };
+
+        public Texture2D GetMask(PropFacing facing) => facing switch
+        {
+            PropFacing.North => northMask,
+            PropFacing.South => southMask,
+            PropFacing.East => eastMask,
+            PropFacing.West => eastMask,
+            _ => northMask
         };
     }
 }

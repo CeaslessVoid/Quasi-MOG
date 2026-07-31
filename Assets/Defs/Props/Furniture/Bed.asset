@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 60b0e113b3376934a97cfba97526e679, type: 3}
+  m_Name: Bed
+  m_EditorClassIdentifier: Assembly-CSharp::GameDefs.PropDef
+  defName: Bed
+  tintColor: {r: 0.52156866, g: 0.38039216, b: 0.2627451, a: 1}
+  secondaryTintColor: {r: 0.28848132, g: 0.5597484, b: 0.24819025, a: 1}
+  maskTexture: {fileID: 0}
+  chanceToBlockBullet: 0.2
+  blocksVision: 0
+  maxHp: 20
+  physicsMaterial: {fileID: 0}
+  category: 0
+  width: 1
+  height: 2
+  interactionType: 0
+  northSprite: {fileID: -647181362906408518, guid: c60795bb889dc9e45b85b8411b985ac1, type: 3}
+  southSprite: {fileID: -5255385671902086302, guid: 6a23e610c5dbf3b4d94d2d21be3d8144, type: 3}
+  eastSprite: {fileID: -6729414987065420126, guid: ea96fb111b5d27f4a81b817947b79ccd, type: 3}
+  northMask: {fileID: 2800000, guid: ed125738af9a6ab4da54fdfacdbf7b95, type: 3}
+  southMask: {fileID: 2800000, guid: 101d75543ba814e4c9f1227ffc4b73a3, type: 3}
+  eastMask: {fileID: 2800000, guid: 31df2a84250bcc749ad94dada6100499, type: 3}

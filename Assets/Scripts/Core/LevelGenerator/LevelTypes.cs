@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using GameDefs;
 
 namespace RoomGen
 {
@@ -42,6 +43,14 @@ namespace RoomGen
         public HashSet<Vector2Int> CellSet => _cellSet ??= new HashSet<Vector2Int>(cells);
     }
 
+    public class PlacedProp
+    {
+        public string propId;
+        public List<Vector2Int> worldCells = new List<Vector2Int>();
+        public PropFacing worldFacing;
+        public int ownerRoomId;
+    }
+
     public class PlacedRoom
     {
         public int id;
@@ -50,6 +59,7 @@ namespace RoomGen
         public int rotationDeg;
         public RectInt worldBounds;
         public List<WorldConnectorRun> connectorRuns = new List<WorldConnectorRun>();
+        public List<PlacedProp> props = new List<PlacedProp>();
 
         public int corridorChainDepth = 0;
 

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using GameDefs;
 
 namespace RoomGen
 {
@@ -97,6 +98,26 @@ namespace RoomGen
                 foreach (var c in localRun.cells)
                     worldRun.cells.Add(RoomTemplateUtility.LocalToWorld(c.x, c.y, t.width, t.height, rotationDeg, origin));
                 room.connectorRuns.Add(worldRun);
+            }
+
+            foreach (var p in t.props)
+            {
+                var def = DefDatabase.Get<PropDef>(p.propId);
+                int pw = def != null ? def.Width : 1;
+                int ph = def != null ? def.Height : 1;
+
+                var localCells = PropPlacementUtility.GetFootprintCells(new Vector2Int(p.cellX, p.cellY), pw, ph, p.facing);
+                var worldCells = new List<Vector2Int>(localCells.Count);
+                foreach (var lc in localCells)
+                    worldCells.Add(RoomTemplateUtility.LocalToWorld(lc.x, lc.y, t.width, t.height, rotationDeg, origin));
+
+                room.props.Add(new PlacedProp
+                {
+                    propId = p.propId,
+                    worldCells = worldCells,
+                    worldFacing = PropPlacementUtility.RotateFacing(p.facing, rotationDeg),
+                    ownerRoomId = room.id
+                });
             }
 
             PlacedRooms.Add(room);

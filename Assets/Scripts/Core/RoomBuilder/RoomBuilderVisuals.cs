@@ -283,35 +283,28 @@ namespace RoomGen
             int width = def != null ? def.Width : 1;
             int height = def != null ? def.Height : 1;
             var footprint = PropPlacementUtility.GetFootprintCells(origin, width, height, p.facing);
-            PropPlacementUtility.GetFootprintBounds(footprint, out var min, out var max);
-
-            if (def != null && def.Category == PropCategory.Wall)
-            {
-                var offset = PropPlacementUtility.GetWallMountOffset(p.facing);
-                min += offset;
-                max += offset;
-            }
+            var category = def != null ? def.Category : PropCategory.Normal;
+            PropPlacementUtility.GetRenderBounds(footprint, category, p.facing, out var min, out var max);
 
             float cx = (min.x + max.x) * 0.5f * cellSize;
             float cy = (min.y + max.y) * 0.5f * cellSize;
             int w = max.x - min.x + 1;
             int h = max.y - min.y + 1;
             bool flip = p.facing == PropFacing.West;
-            float depth = def != null && def.Category == PropCategory.Decorative ? -0.25f : -0.2f;
+            float depth = category == PropCategory.Decorative ? -0.25f : -0.2f;
 
             pv.root.localPosition = new Vector3(cx, cy, depth);
-            pv.body.transform.localScale = new Vector3((flip ? -1f : 1f) * w * cellSize, h * cellSize, 1f);
+
+            Sprite sprite = def != null && def.HasTexture ? def.GetSprite(p.facing) : DefVisualUtility.MissingSprite;
+            pv.body.sprite = sprite;
 
             if (def != null && def.HasTexture)
-            {
-                pv.body.sprite = def.GetSprite(p.facing);
-                pv.body.color = def.TintColor;
-            }
+                DefTintRenderer.Apply(pv.body, def.TintColor, def.SecondaryTintColor, def.GetMask(p.facing));
             else
-            {
-                pv.body.sprite = DefVisualUtility.MissingSprite;
-                pv.body.color = DefVisualUtility.MissingColor;
-            }
+                DefTintRenderer.ApplyFlatTint(pv.body, DefVisualUtility.MissingColor);
+
+            var fitSize = PropSpriteUtility.GetUniformFitSize(sprite, w * cellSize, h * cellSize);
+            pv.body.transform.localScale = new Vector3((flip ? -1f : 1f) * fitSize.x, fitSize.y, 1f);
         }
 
         private PropVisual CreatePropVisual(Vector2Int origin)
@@ -376,7 +369,7 @@ namespace RoomGen
             if (_previewGhost != null) _previewGhost.enabled = false;
         }
 
-        public void ShowPreview(IReadOnlyList<(Vector2Int cell, bool valid)> footprint, Sprite ghostSprite, Color ghostColor, Vector2Int boundsMin, Vector2Int boundsMax, bool flipGhostX)
+        public void ShowPreview(IReadOnlyList<(Vector2Int cell, bool valid)> footprint, Sprite ghostSprite, Color primaryTint, Color secondaryTint, Texture2D mask, Vector2Int boundsMin, Vector2Int boundsMax, bool flipGhostX)
         {
             EnsureGhost();
 
@@ -398,16 +391,18 @@ namespace RoomGen
             {
                 _previewGhost.enabled = true;
                 _previewGhost.sprite = ghostSprite;
-                var color = ghostColor;
-                color.a *= 0.55f;
-                _previewGhost.color = color;
 
-                float cx = (boundsMin.x + boundsMax.x) * 0.5f * cellSize;
-                float cy = (boundsMin.y + boundsMax.y) * 0.5f * cellSize;
+                DefTintRenderer.Apply(_previewGhost, primaryTint, secondaryTint, mask);
+                _previewGhost.color = new Color(1f, 1f, 1f, 0.55f);
+
                 int w = boundsMax.x - boundsMin.x + 1;
                 int h = boundsMax.y - boundsMin.y + 1;
+                float cx = (boundsMin.x + boundsMax.x) * 0.5f * cellSize;
+                float cy = (boundsMin.y + boundsMax.y) * 0.5f * cellSize;
                 _previewGhost.transform.localPosition = new Vector3(cx, cy, -0.25f);
-                _previewGhost.transform.localScale = new Vector3((flipGhostX ? -1f : 1f) * w * cellSize, h * cellSize, 1f);
+
+                var fitSize = PropSpriteUtility.GetUniformFitSize(ghostSprite, w * cellSize, h * cellSize);
+                _previewGhost.transform.localScale = new Vector3((flipGhostX ? -1f : 1f) * fitSize.x, fitSize.y, 1f);
             }
             else
             {

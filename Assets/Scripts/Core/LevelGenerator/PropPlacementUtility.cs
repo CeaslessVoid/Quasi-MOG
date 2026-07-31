@@ -14,6 +14,12 @@ namespace RoomGen
             return offset;
         }
 
+        public static PropFacing RotateFacing(PropFacing facing, int roomRotationDeg)
+        {
+            int roomCwSteps = (4 - (roomRotationDeg / 90) % 4) % 4;
+            return (PropFacing)(((int)facing + roomCwSteps) % 4);
+        }
+
         public static List<Vector2Int> GetFootprintCells(Vector2Int origin, int width, int height, PropFacing facing)
         {
             var cells = new List<Vector2Int>(width * height);
@@ -39,6 +45,19 @@ namespace RoomGen
             {
                 min = Vector2Int.Min(min, cells[i]);
                 max = Vector2Int.Max(max, cells[i]);
+            }
+            return true;
+        }
+
+        public static bool GetRenderBounds(List<Vector2Int> footprintCells, PropCategory category, PropFacing facing, out Vector2Int min, out Vector2Int max)
+        {
+            if (!GetFootprintBounds(footprintCells, out min, out max)) return false;
+
+            if (category == PropCategory.Wall)
+            {
+                var offset = GetWallMountOffset(facing);
+                min += offset;
+                max += offset;
             }
             return true;
         }
