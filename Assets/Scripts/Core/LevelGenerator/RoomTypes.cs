@@ -7,7 +7,7 @@ namespace RoomGen
     {
         Void = 0,
         Floor = 1,
-        Water = 2,
+        Liquid = 2,
     }
 
     public enum NormalType

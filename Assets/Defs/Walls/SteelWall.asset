@@ -13,7 +13,11 @@ MonoBehaviour:
   m_Name: SteelWall
   m_EditorClassIdentifier: Assembly-CSharp::GameDefs.WallDef
   defName: SteelWall
+  displayName: Steel Wall
+  icon: {fileID: 87973671, guid: f62bd06e1141bcb439ce3c721be707ba, type: 3}
   tintColor: {r: 0.4117647, g: 0.4117647, b: 0.4117647, a: 1}
+  secondaryTintColor: {r: 1, g: 1, b: 1, a: 1}
+  maskTexture: {fileID: 0}
   chanceToBlockBullet: 1
   blocksVision: 1
   maxHp: 500

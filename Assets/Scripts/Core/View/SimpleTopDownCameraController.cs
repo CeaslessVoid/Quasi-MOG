@@ -40,7 +40,10 @@ namespace RoomGen
                 targetCamera.transform.position += move.normalized * (panSpeed * speedScale * Time.deltaTime);
             }
 
-            if (Input.mousePosition.x >= reservedPanelWidth)
+            bool overUI = UnityEngine.EventSystems.EventSystem.current != null &&
+              UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject();
+
+            if (Input.mousePosition.x >= reservedPanelWidth && !overUI)
             {
                 float scroll = Input.GetAxis("Mouse ScrollWheel");
                 if (Mathf.Abs(scroll) > 0.0001f)

@@ -13,11 +13,16 @@ MonoBehaviour:
   m_Name: SmoothDoubleDoor
   m_EditorClassIdentifier: Assembly-CSharp::GameDefs.DoorDef
   defName: SmoothDoubleDoor
+  displayName: Smooth Double Door
+  icon: {fileID: 8832235762741588047, guid: 7828ec89af5b22d4fa53279de6f77619, type: 3}
+  tintColor: {r: 0.4117647, g: 0.4117647, b: 0.4117647, a: 1}
+  secondaryTintColor: {r: 1, g: 1, b: 1, a: 1}
+  maskTexture: {fileID: 0}
   chanceToBlockBullet: 1
   blocksVision: 1
+  maxHp: 100
   physicsMaterial: {fileID: 0}
   isDoubleDoor: 1
   northSprite: {fileID: 8832235762741588047, guid: 7828ec89af5b22d4fa53279de6f77619, type: 3}
   eastSprite: {fileID: 6951041545814427575, guid: 133b817732f83d54597841b2abe0f51d, type: 3}
-  tintColor: {r: 0.4117647, g: 0.4117647, b: 0.4117647, a: 1}
   singleDoorFallback: {fileID: 11400000, guid: 7a0defee33f4bc543a89441789849fd8, type: 2}

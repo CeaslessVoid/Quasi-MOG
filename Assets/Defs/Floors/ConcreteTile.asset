@@ -13,5 +13,9 @@ MonoBehaviour:
   m_Name: ConcreteTile
   m_EditorClassIdentifier: Assembly-CSharp::GameDefs.FloorDef
   defName: ConcreteTile
-  sprite: {fileID: -133107270887145440, guid: 7fe48ce7083deac4098a05603bc4e8d0, type: 3}
+  displayName: Concrete Tile
+  icon: {fileID: -133107270887145440, guid: 7fe48ce7083deac4098a05603bc4e8d0, type: 3}
   tintColor: {r: 1, g: 1, b: 1, a: 1}
+  secondaryTintColor: {r: 1, g: 1, b: 1, a: 1}
+  maskTexture: {fileID: 0}
+  sprite: {fileID: -133107270887145440, guid: 7fe48ce7083deac4098a05603bc4e8d0, type: 3}

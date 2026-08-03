@@ -490,7 +490,7 @@ namespace RoomGen
 
             if (data.floor != FloorType.Void)
             {
-                Gizmos.color = data.floor == FloorType.Water
+                Gizmos.color = data.floor == FloorType.Liquid
                     ? new Color(0.2f, 0.4f, 0.9f)
                     : new Color(0.55f, 0.55f, 0.55f);
                 Gizmos.DrawCube(pos, new Vector3(cellSize * 0.98f, cellSize * 0.98f, 0.05f));

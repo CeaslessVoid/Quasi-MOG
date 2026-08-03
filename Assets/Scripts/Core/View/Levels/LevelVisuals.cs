@@ -31,8 +31,10 @@ namespace RoomGen
 
         private readonly Dictionary<FloorDef, Tile> _floorTileCache = new Dictionary<FloorDef, Tile>();
         private readonly Dictionary<(WallDef, int), Tile> _wallTileCache = new Dictionary<(WallDef, int), Tile>();
-
-        private Tile _waterTile;
+        private readonly Dictionary<LiquidDef, Tile> _liquidTileCache = new Dictionary<LiquidDef, Tile>();
+      
+        
+        private Tile _missingLiquidTile;
         private Tile _missingFloorTile;
         private Tile _missingWallTile;
         private Sprite _missingDoorSprite;
@@ -56,7 +58,7 @@ namespace RoomGen
             _propRoot = new GameObject("Props").transform;
             _propRoot.SetParent(_root, false);
 
-            _waterTile = BuildSolidTile(new Color(0.2f, 0.4f, 0.9f));
+            _missingLiquidTile = BuildSolidTile(Color.white, DefVisualUtility.MissingSprite);
             _missingFloorTile = BuildSolidTile(Color.white, DefVisualUtility.MissingSprite);
             _missingWallTile = BuildSolidTile(Color.white, DefVisualUtility.MissingSprite);
             _missingDoorSprite = DefVisualUtility.MissingSprite;
@@ -106,9 +108,10 @@ namespace RoomGen
             var data = grid.GetCell(cell);
             var pos = new Vector3Int(cell.x, cell.y, 0);
 
-            if (data.floor == FloorType.Water)
+            if (data.floor == FloorType.Liquid)
             {
-                _floorTilemap.SetTile(pos, _waterTile);
+                var liquidDef = DefDatabase.Get<LiquidDef>(data.floorDef);
+                _floorTilemap.SetTile(pos, GetLiquidTile(liquidDef));
             }
             else if (data.floor == FloorType.Floor)
             {
@@ -132,6 +135,19 @@ namespace RoomGen
             {
                 RefreshDoorCell(grid, cell);
             }
+        }
+
+        private Tile GetLiquidTile(LiquidDef def)
+        {
+            if (def == null || !def.HasTexture) return _missingLiquidTile;
+            if (_liquidTileCache.TryGetValue(def, out var tile)) return tile;
+
+            tile = ScriptableObject.CreateInstance<Tile>();
+            tile.sprite = def.Sprite;
+            tile.color = def.TintColor;
+            tile.colliderType = Tile.ColliderType.None;
+            _liquidTileCache[def] = tile;
+            return tile;
         }
 
         private static bool IsWallLike(LevelGrid grid, Vector2Int cell) => grid.GetCell(cell).normal == NormalType.Wall;

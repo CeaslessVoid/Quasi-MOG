@@ -24,10 +24,22 @@ namespace GameDefs
         Storage = 2,
     }
 
+    [System.Flags]
+    public enum PropUseCategory
+    {
+        None = 0,
+        WorkProduction = 1 << 0,
+        LivingQuarters = 1 << 1,
+        Decoration = 1 << 2,
+        Plants = 1 << 3,
+        Entertainment = 1 << 4,
+    }
+
     [CreateAssetMenu(fileName = "NewPropDef", menuName = "Defs/Prop Def")]
     public class PropDef : BlockerDef
     {
         [SerializeField] private PropCategory category = PropCategory.Normal;
+        [SerializeField] private PropUseCategory useCategories = PropUseCategory.None;
         [SerializeField] private int width = 1;
         [SerializeField] private int height = 1;
         [SerializeField] private PropInteractionType interactionType = PropInteractionType.None;
@@ -39,10 +51,12 @@ namespace GameDefs
         [SerializeField] private Texture2D eastMask;
 
         public PropCategory Category => category;
+        public PropUseCategory UseCategories => useCategories;
         public int Width => Mathf.Max(1, width);
         public int Height => Mathf.Max(1, height);
         public PropInteractionType InteractionType => interactionType;
         public bool IsInteractable => interactionType != PropInteractionType.None;
+        public bool CanHaveStorage => interactionType == PropInteractionType.Storage;
         public bool HasTexture => northSprite != null || southSprite != null || eastSprite != null;
 
         public Sprite GetSprite(PropFacing facing) => facing switch

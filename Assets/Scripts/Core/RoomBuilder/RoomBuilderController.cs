@@ -44,6 +44,14 @@ namespace RoomGen
         private List<string> _roomFiles = new List<string>();
         private string _statusMessage = "";
 
+        public BuilderTool ActiveTool => _tool;
+        public string CurrentFloorDefBrush => _floorDefBrush;
+        public string CurrentWallDefBrush => _wallDefBrush;
+        public string CurrentDoorDefBrush => _doorDefBrush;
+        public string CurrentPropDefBrush => _currentPropId;
+        public ConnectorType CurrentConnectorBrush => _connectorBrush;
+        public bool IsWaterBrushActive => _floorBrushType == FloorType.Liquid;
+
         public void Configure(Camera cam, RoomBuilderVisuals vis)
         {
             targetCamera = cam;
@@ -68,6 +76,12 @@ namespace RoomGen
         {
             if (_state == null || targetCamera == null) return;
             if (Input.mousePosition.x < panelWidth) { visuals.ClearPreview(); return; }
+            if (UnityEngine.EventSystems.EventSystem.current != null &&
+                UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+            {
+                visuals.ClearPreview();
+                return;
+            }
 
             var mouseWorld = targetCamera.ScreenToWorldPoint(Input.mousePosition);
             mouseWorld.z = 0f;
@@ -134,25 +148,16 @@ namespace RoomGen
                 return;
             }
 
-            if (_floorBrushType == FloorType.Floor)
-            {
-                var def = DefDatabase.Get<FloorDef>(_floorDefBrush);
-                Sprite sprite = def != null && def.HasTexture ? def.Sprite : DefVisualUtility.MissingSprite;
-                Color tint = def != null ? def.TintColor : Color.white;
-                Color secondary = def != null ? def.SecondaryTintColor : Color.white;
-                Texture2D mask = def != null ? def.MaskTexture : null;
-                visuals.ShowPreview(_singleCellScratch, sprite, tint, secondary, mask, cell, cell, false);
-            }
-            else if (_floorBrushType == FloorType.Water)
-            {
-                visuals.ShowPreview(_singleCellScratch, DefVisualUtility.SolidSprite, new Color(0.2f, 0.4f, 0.9f), Color.white, null, cell, cell, false);
-            }
-            else
-            {
-                visuals.ShowPreview(_singleCellScratch, DefVisualUtility.SolidSprite, new Color(1f, 1f, 1f, 0.15f), Color.white, null, cell, cell, false);
-            }
-        }
+            SurfaceDef def = _floorBrushType == FloorType.Liquid
+                ? (SurfaceDef)DefDatabase.Get<LiquidDef>(_floorDefBrush)
+                : DefDatabase.Get<FloorDef>(_floorDefBrush);
 
+            Sprite sprite = def != null && def.HasTexture ? def.Sprite : DefVisualUtility.MissingSprite;
+            Color tint = def != null ? def.TintColor : Color.white;
+            Color secondary = def != null ? def.SecondaryTintColor : Color.white;
+            Texture2D mask = def != null ? def.MaskTexture : null;
+            visuals.ShowPreview(_singleCellScratch, sprite, tint, secondary, mask, cell, cell, false);
+        }
         private void PreviewNormal(int x, int y)
         {
             var cell = new Vector2Int(x, y);
@@ -262,7 +267,7 @@ namespace RoomGen
                     else
                     {
                         _state.SetFloor(x, y, _floorBrushType);
-                        if (_floorBrushType == FloorType.Floor) _state.SetFloorDef(x, y, _floorDefBrush);
+                        _state.SetFloorDef(x, y, _floorDefBrush);
                     }
                     visuals.RefreshCell(_state, x, y);
                     break;
@@ -382,8 +387,6 @@ namespace RoomGen
             GUILayout.Space(8);
             DrawWeightsSection();
             GUILayout.Space(8);
-            DrawToolSection();
-            GUILayout.Space(8);
 
             GUILayout.Label(_statusMessage);
 
@@ -494,82 +497,6 @@ namespace RoomGen
             _state.selectionWeight = GUILayout.HorizontalSlider(_state.selectionWeight, 0.1f, 5f);
         }
 
-        private void DrawToolSection()
-        {
-            if (_state == null) return;
-            GUILayout.Label("Tool (left-drag paint / right-drag erase)");
-
-            GUILayout.BeginHorizontal();
-            DrawToolButton(BuilderTool.Floor, "Floor");
-            DrawToolButton(BuilderTool.Normal, "Normal");
-            GUILayout.EndHorizontal();
-            GUILayout.BeginHorizontal();
-            DrawToolButton(BuilderTool.Connector, "Connector");
-            DrawToolButton(BuilderTool.Prop, "Prop");
-            GUILayout.EndHorizontal();
-
-            GUILayout.Space(6);
-
-            switch (_tool)
-            {
-                case BuilderTool.Floor:
-                    GUILayout.Label("Floor Type");
-                    DrawEnumBrushButtons(new[] { FloorType.Void, FloorType.Floor, FloorType.Water }, _floorBrushType, v => _floorBrushType = v);
-                    if (_floorBrushType == FloorType.Floor)
-                    {
-                        GUILayout.Label("Floor Def");
-                        DrawDefBrushButtons(DefDatabase.All<FloorDef>(), _floorDefBrush, v => _floorDefBrush = v);
-                    }
-                    break;
-                case BuilderTool.Normal:
-                    GUILayout.Label("Structure Type");
-                    DrawEnumBrushButtons(new[] { NormalType.Empty, NormalType.Wall, NormalType.Door }, _normalBrushType, v => _normalBrushType = v);
-                    if (_normalBrushType == NormalType.Wall)
-                    {
-                        GUILayout.Label("Wall Def");
-                        DrawDefBrushButtons(DefDatabase.All<WallDef>(), _wallDefBrush, v => _wallDefBrush = v);
-                    }
-                    else if (_normalBrushType == NormalType.Door)
-                    {
-                        GUILayout.Label("Door Def");
-                        DrawDefBrushButtons(DefDatabase.All<DoorDef>(), _doorDefBrush, v => _doorDefBrush = v);
-                    }
-                    break;
-                case BuilderTool.Connector:
-                    GUILayout.Label("Connector Brush (any wall cell)");
-                    DrawEnumBrushButtons(new[] { ConnectorType.None, ConnectorType.Normal, ConnectorType.Restricted, ConnectorType.AlwaysDouble }, _connectorBrush, v => _connectorBrush = v);
-                    break;
-                case BuilderTool.Prop:
-                    GUILayout.Label("Prop Def");
-                    DrawDefBrushButtons(DefDatabase.All<PropDef>(), _currentPropId, v => _currentPropId = v);
-                    GUILayout.Label($"Facing: {_currentPropFacing}");
-                    GUILayout.Label("Click: place   Right-click: delete   R: rotate facing");
-                    break;
-            }
-        }
-
-        private void DrawToolButton(BuilderTool tool, string label)
-        {
-            GUI.backgroundColor = _tool == tool ? Color.cyan : Color.white;
-            if (GUILayout.Button(label))
-            {
-                _tool = tool;
-                visuals.SetConnectorOverlayVisible(_tool == BuilderTool.Connector);
-                visuals.ClearPreview();
-            }
-            GUI.backgroundColor = Color.white;
-        }
-
-        private void DrawEnumBrushButtons<T>(T[] values, T current, System.Action<T> onPick) where T : System.Enum
-        {
-            foreach (var v in values)
-            {
-                GUI.backgroundColor = EqualityComparer<T>.Default.Equals(v, current) ? Color.cyan : Color.white;
-                if (GUILayout.Button(v.ToString())) onPick(v);
-            }
-            GUI.backgroundColor = Color.white;
-        }
-
         private void DrawDefBrushButtons<T>(IReadOnlyList<T> defs, string current, System.Action<string> onPick) where T : Def
         {
             if (defs.Count == 0)
@@ -586,5 +513,40 @@ namespace RoomGen
             }
             GUI.backgroundColor = Color.white;
         }
+
+        public void SetActiveTool(BuilderTool tool)
+        {
+            _tool = tool;
+            visuals.SetConnectorOverlayVisible(_tool == BuilderTool.Connector);
+            visuals.ClearPreview();
+        }
+
+        public void SetFloorDefBrush(string defName)
+        {
+            _floorBrushType = FloorType.Floor;
+            _floorDefBrush = defName;
+        }
+
+        public void SetLiquidDefBrush(string defName)
+        {
+            _floorBrushType = FloorType.Liquid;
+            _floorDefBrush = defName;
+        }
+
+        public void SetWallDefBrush(string defName)
+        {
+            _normalBrushType = NormalType.Wall;
+            _wallDefBrush = defName;
+        }
+
+        public void SetDoorDefBrush(string defName)
+        {
+            _normalBrushType = NormalType.Door;
+            _doorDefBrush = defName;
+        }
+
+        public void SetPropBrush(string defName) => _currentPropId = defName;
+
+        public void SetConnectorBrush(ConnectorType type) => _connectorBrush = type;
     }
 }

@@ -154,11 +154,20 @@ namespace RoomGen
             {
                 floorR.enabled = false;
             }
-            else if (floor == FloorType.Water)
+            else if (floor == FloorType.Liquid)
             {
+                var liquidDef = DefDatabase.Get<LiquidDef>(state.GetFloorDef(x, y));
                 floorR.enabled = true;
-                floorR.sprite = DefVisualUtility.SolidSprite;
-                floorR.color = new Color(0.2f, 0.4f, 0.9f);
+                if (liquidDef != null && liquidDef.HasTexture)
+                {
+                    floorR.sprite = liquidDef.Sprite;
+                    floorR.color = liquidDef.TintColor;
+                }
+                else
+                {
+                    floorR.sprite = DefVisualUtility.MissingSprite;
+                    floorR.color = Color.white;
+                }
             }
             else
             {
