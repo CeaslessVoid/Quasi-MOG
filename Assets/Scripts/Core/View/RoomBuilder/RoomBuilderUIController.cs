@@ -12,6 +12,7 @@ namespace RoomGen.UI
     {
         [Header("Target")]
         [SerializeField] private RoomBuilderController controller;
+        [SerializeField] private RoomBuilderTopBarController topBar;
 
         [Header("Bottom Tabs")]
         [SerializeField] private Button floorTabButton;
@@ -23,6 +24,7 @@ namespace RoomGen.UI
 
         [Header("Side Panel")]
         [SerializeField] private GameObject sidePanelRoot;
+        [SerializeField] private CanvasGroup sidePanelVisibilityGroup;
         [SerializeField] private CategoryTabBar categoryTabBar;
         [SerializeField] private DefListPanel defListPanel;
         [SerializeField] private TMP_InputField searchInput;
@@ -31,6 +33,15 @@ namespace RoomGen.UI
         [SerializeField] private GameObject propFilterRoot;
         [SerializeField] private Toggle includeStorageToggle;
         [SerializeField] private Toggle includeWallPropsToggle;
+
+        [Header("Auto-Hide On Drag")]
+        [SerializeField] private bool debugDrawThresholds = true;
+        [SerializeField] private float hideThresholdY = 900f;
+        [SerializeField] private float showThresholdY = 500f;
+        [SerializeField] private float showThresholdX = 150f;
+        [SerializeField] private RectTransform debugHideLine;
+        [SerializeField] private RectTransform debugShowLineY;
+        [SerializeField] private RectTransform debugShowLineX;
 
         private static readonly string[] NormalCategoryLabels = { "Walls", "Doors" };
         private static readonly string[] PropCategoryLabels =
@@ -45,10 +56,13 @@ namespace RoomGen.UI
             PropUseCategory.Entertainment
         };
 
-        private BuilderTool _activeTool = BuilderTool.Floor;
+        private BuilderTool _activeTool = BuilderTool.None;
         private int _normalCategoryIndex;
         private int _propCategoryIndex;
         private string _searchText = "";
+        private bool _hiddenByDrag;
+
+        public bool IsSidePanelOpen => _activeTool != BuilderTool.None;
 
         private void Awake()
         {
@@ -68,17 +82,42 @@ namespace RoomGen.UI
                 includeWallPropsToggle.isOn = true;
                 includeWallPropsToggle.onValueChanged.AddListener(_ => RefreshList());
             }
+
+            sidePanelRoot.SetActive(false);
+
+            if (debugHideLine != null) debugHideLine.gameObject.SetActive(debugDrawThresholds);
+            if (debugShowLineY != null) debugShowLineY.gameObject.SetActive(debugDrawThresholds);
+            if (debugShowLineX != null) debugShowLineX.gameObject.SetActive(debugDrawThresholds);
+            PositionDebugLines();
         }
 
-        private void Start() => SelectTool(BuilderTool.Floor);
+        private void Update()
+        {
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                CloseSidePanel();
+                topBar.CloseAll();
+            }
+
+            UpdateDragVisibility();
+        }
 
         private void SelectTool(BuilderTool tool)
         {
             _activeTool = tool;
             controller.SetActiveTool(tool);
+            topBar.CloseAll();
             RefreshTabHighlight();
             RefreshPanelLayout();
             RefreshList();
+        }
+
+        public void CloseSidePanel()
+        {
+            _activeTool = BuilderTool.None;
+            controller.ClearActiveTool();
+            sidePanelRoot.SetActive(false);
+            RefreshTabHighlight();
         }
 
         private void RefreshTabHighlight()
@@ -97,6 +136,12 @@ namespace RoomGen.UI
 
         private void RefreshPanelLayout()
         {
+            if (_activeTool == BuilderTool.None)
+            {
+                sidePanelRoot.SetActive(false);
+                return;
+            }
+
             sidePanelRoot.SetActive(true);
 
             if (searchInput != null) searchInput.gameObject.SetActive(_activeTool != BuilderTool.Connector);
@@ -132,7 +177,7 @@ namespace RoomGen.UI
             switch (_activeTool)
             {
                 case BuilderTool.Floor:
-                    defListPanel.Populate(BuildFloorItems(), IsFloorItemSelected);
+                    defListPanel.Populate(BuildFloorItems(), name => name == controller.CurrentFloorDefBrush);
                     break;
 
                 case BuilderTool.Normal:
@@ -161,20 +206,13 @@ namespace RoomGen.UI
             return nameMatch || displayMatch;
         }
 
-        private bool IsFloorItemSelected(string defName) => defName == controller.CurrentFloorDefBrush;
-
         private List<PlaceableItem> BuildFloorItems()
         {
             var result = new List<PlaceableItem>();
-
-            result.AddRange(DefDatabase.All<FloorDef>()
-                .Where(Matches)
+            result.AddRange(DefDatabase.All<FloorDef>().Where(Matches)
                 .Select(def => new PlaceableItem(def.DefName, def.DisplayName, def.Icon, () => controller.SetFloorDefBrush(def.DefName))));
-
-            result.AddRange(DefDatabase.All<LiquidDef>()
-                .Where(Matches)
+            result.AddRange(DefDatabase.All<LiquidDef>().Where(Matches)
                 .Select(def => new PlaceableItem(def.DefName, def.DisplayName, def.Icon, () => controller.SetLiquidDefBrush(def.DefName))));
-
             return result;
         }
 
@@ -215,6 +253,49 @@ namespace RoomGen.UI
                 result.Add(new PlaceableItem(v.ToString(), v.ToString(), null, () => controller.SetConnectorBrush(captured)));
             }
             return result;
+        }
+
+        private void UpdateDragVisibility()
+        {
+            if (debugDrawThresholds) PositionDebugLines();
+            if (sidePanelVisibilityGroup == null || !IsSidePanelOpen) return;
+
+            Vector2 mouse = Input.mousePosition;
+
+            if (!_hiddenByDrag && mouse.y >= hideThresholdY)
+                _hiddenByDrag = true;
+            else if (_hiddenByDrag && (mouse.y <= showThresholdY || mouse.x <= showThresholdX))
+                _hiddenByDrag = false;
+
+            bool visible = !_hiddenByDrag;
+            sidePanelVisibilityGroup.alpha = visible ? 1f : 0f;
+            sidePanelVisibilityGroup.interactable = visible;
+            sidePanelVisibilityGroup.blocksRaycasts = visible;
+        }
+
+        private void PositionDebugLines()
+        {
+            PositionHorizontalLine(debugHideLine, hideThresholdY, Color.red);
+            PositionHorizontalLine(debugShowLineY, showThresholdY, new Color(0.2f, 1f, 0.3f));
+            PositionVerticalLine(debugShowLineX, showThresholdX, new Color(0.3f, 0.6f, 1f));
+        }
+
+        private void PositionHorizontalLine(RectTransform line, float screenY, Color color)
+        {
+            if (line == null) return;
+            var canvasRect = (RectTransform)line.parent;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, new Vector2(0f, screenY), null, out var local);
+            line.anchoredPosition = new Vector2(line.anchoredPosition.x, local.y);
+            if (line.TryGetComponent<Image>(out var img)) img.color = color;
+        }
+
+        private void PositionVerticalLine(RectTransform line, float screenX, Color color)
+        {
+            if (line == null) return;
+            var canvasRect = (RectTransform)line.parent;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, new Vector2(screenX, 0f), null, out var local);
+            line.anchoredPosition = new Vector2(local.x, line.anchoredPosition.y);
+            if (line.TryGetComponent<Image>(out var img)) img.color = color;
         }
     }
 }

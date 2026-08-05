@@ -1,21 +1,21 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using GameDefs;
 
 namespace RoomGen
 {
-    public enum BuilderTool { Floor, Normal, Connector, Prop }
+    public enum BuilderTool { None, Floor, Normal, Connector, Prop }
 
     [RequireComponent(typeof(RoomBuilderVisuals))]
     public class RoomBuilderController : MonoBehaviour
     {
         [SerializeField] private Camera targetCamera;
         [SerializeField] private RoomBuilderVisuals visuals;
-        [SerializeField] private float panelWidth = 300f;
 
         private RoomData _state;
-        private BuilderTool _tool = BuilderTool.Floor;
+        private BuilderTool _tool = BuilderTool.None;
 
         private FloorType _floorBrushType = FloorType.Floor;
         private NormalType _normalBrushType = NormalType.Wall;
@@ -34,15 +34,12 @@ namespace RoomGen
         private readonly List<(Vector2Int cell, bool valid)> _singleCellScratch = new List<(Vector2Int, bool)>(1);
         private readonly List<(Vector2Int cell, bool valid)> _propPreviewScratch = new List<(Vector2Int, bool)>();
 
-        private string _newWidthField = "5";
-        private string _newHeightField = "5";
-        private string _templateIdField = "NewRoom";
-        private string _typeTagField = "";
-        private string _zoneTagField = "";
-        private Vector2 _panelScroll;
-        private Vector2 _fileListScroll;
         private List<string> _roomFiles = new List<string>();
         private string _statusMessage = "";
+
+        public RoomData CurrentRoom => _state;
+        public IReadOnlyList<string> RoomFiles => _roomFiles;
+        public string StatusMessage => _statusMessage;
 
         public BuilderTool ActiveTool => _tool;
         public string CurrentFloorDefBrush => _floorDefBrush;
@@ -50,7 +47,6 @@ namespace RoomGen
         public string CurrentDoorDefBrush => _doorDefBrush;
         public string CurrentPropDefBrush => _currentPropId;
         public ConnectorType CurrentConnectorBrush => _connectorBrush;
-        public bool IsWaterBrushActive => _floorBrushType == FloorType.Liquid;
 
         public void Configure(Camera cam, RoomBuilderVisuals vis)
         {
@@ -69,15 +65,98 @@ namespace RoomGen
             if (DefDatabase.All<FloorDef>().Count > 0) _floorDefBrush = DefDatabase.All<FloorDef>()[0].DefName;
             if (DefDatabase.All<PropDef>().Count > 0) _currentPropId = DefDatabase.All<PropDef>()[0].DefName;
         }
+        public void SetActiveTool(BuilderTool tool)
+        {
+            _tool = tool;
+            visuals.SetConnectorOverlayVisible(_tool == BuilderTool.Connector);
+            visuals.ClearPreview();
+        }
 
-        private bool IsTypingInField => GUIUtility.keyboardControl != 0;
+        public void ClearActiveTool() => SetActiveTool(BuilderTool.None);
+
+        public void SetFloorDefBrush(string defName)
+        {
+            _floorBrushType = FloorType.Floor;
+            _floorDefBrush = defName;
+        }
+
+        public void SetLiquidDefBrush(string defName)
+        {
+            _floorBrushType = FloorType.Liquid;
+            _floorDefBrush = defName;
+        }
+
+        public void SetWallDefBrush(string defName)
+        {
+            _normalBrushType = NormalType.Wall;
+            _wallDefBrush = defName;
+        }
+
+        public void SetDoorDefBrush(string defName)
+        {
+            _normalBrushType = NormalType.Door;
+            _doorDefBrush = defName;
+        }
+
+        public void SetPropBrush(string defName) => _currentPropId = defName;
+
+        public void SetConnectorBrush(ConnectorType type) => _connectorBrush = type;
+
+        public void CreateNewRoom(int width, int height, string templateId)
+        {
+            _state = new RoomData();
+            _state.Allocate(width, height);
+            _state.templateId = string.IsNullOrWhiteSpace(templateId) ? "NewRoom" : templateId;
+            visuals.Rebuild(_state);
+            _statusMessage = $"Created {_state.width}x{_state.height} room.";
+        }
+
+        public void SaveRoom(string templateIdOverride = null)
+        {
+            if (_state == null) { _statusMessage = "Nothing to save."; return; }
+            if (!string.IsNullOrWhiteSpace(templateIdOverride)) _state.templateId = templateIdOverride;
+            RoomLibraryIO.Save(_state);
+            RefreshFileList();
+            _statusMessage = $"Saved '{_state.templateId}' to {RoomLibraryIO.RoomsFolder}";
+        }
+
+        public void LoadRoom(string path)
+        {
+            _state = RoomLibraryIO.Load(path);
+            visuals.Rebuild(_state);
+            _statusMessage = $"Loaded '{_state.templateId}'.";
+        }
+
+        public void RefreshFileList() => _roomFiles = RoomLibraryIO.ListRoomFiles();
+        public void AddTypeTag(string tag)
+        {
+            if (_state == null || string.IsNullOrWhiteSpace(tag)) return;
+            if (!_state.typeTags.Contains(tag)) _state.typeTags.Add(tag);
+        }
+
+        public void RemoveTypeTag(string tag) => _state?.typeTags.Remove(tag);
+
+        public void AddZoneTag(string tag)
+        {
+            if (_state == null || string.IsNullOrWhiteSpace(tag)) return;
+            if (!_state.zoneTags.Contains(tag)) _state.zoneTags.Add(tag);
+        }
+
+        public void RemoveZoneTag(string tag) => _state?.zoneTags.Remove(tag);
+        public void SetPreferredSingleDoorDef(string defName) { if (_state != null) _state.preferredSingleDoorDef = defName; }
+        public void ClearPreferredSingleDoorDef() { if (_state != null) _state.preferredSingleDoorDef = null; }
+        public void SetPreferredDoubleDoorDef(string defName) { if (_state != null) _state.preferredDoubleDoorDef = defName; }
+        public void ClearPreferredDoubleDoorDef() { if (_state != null) _state.preferredDoubleDoorDef = null; }
 
         private void Update()
         {
             if (_state == null || targetCamera == null) return;
-            if (Input.mousePosition.x < panelWidth) { visuals.ClearPreview(); return; }
-            if (UnityEngine.EventSystems.EventSystem.current != null &&
-                UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            {
+                visuals.ClearPreview();
+                return;
+            }
+            if (_tool == BuilderTool.None)
             {
                 visuals.ClearPreview();
                 return;
@@ -125,6 +204,8 @@ namespace RoomGen
             else _lastPaintCellRight = null;
         }
 
+        private bool IsTypingInField => GUIUtility.keyboardControl != 0;
+
         private void UpdatePreview(int cx, int cy)
         {
             switch (_tool)
@@ -158,6 +239,7 @@ namespace RoomGen
             Texture2D mask = def != null ? def.MaskTexture : null;
             visuals.ShowPreview(_singleCellScratch, sprite, tint, secondary, mask, cell, cell, false);
         }
+
         private void PreviewNormal(int x, int y)
         {
             var cell = new Vector2Int(x, y);
@@ -334,219 +416,5 @@ namespace RoomGen
             var origin = new Vector2Int(hit.Value.cellX, hit.Value.cellY);
             if (_state.RemoveProp(origin.x, origin.y)) visuals.RemoveProp(origin);
         }
-
-        private void CreateNewRoom()
-        {
-            int w = ParseIntOrDefault(_newWidthField, 5);
-            int h = ParseIntOrDefault(_newHeightField, 5);
-            _state = new RoomData();
-            _state.Allocate(w, h);
-            _state.templateId = _templateIdField;
-            visuals.Rebuild(_state);
-            _statusMessage = $"Created {_state.width}x{_state.height} room.";
-        }
-
-        private void SaveRoom()
-        {
-            if (_state == null) { _statusMessage = "Nothing to save."; return; }
-            if (!string.IsNullOrWhiteSpace(_templateIdField)) _state.templateId = _templateIdField;
-            RoomLibraryIO.Save(_state);
-            RefreshFileList();
-            _statusMessage = $"Saved '{_state.templateId}' to {RoomLibraryIO.RoomsFolder}";
-        }
-
-        private void LoadRoom(string path)
-        {
-            _state = RoomLibraryIO.Load(path);
-            _templateIdField = _state.templateId;
-            _newWidthField = _state.width.ToString();
-            _newHeightField = _state.height.ToString();
-            visuals.Rebuild(_state);
-            _statusMessage = $"Loaded '{_state.templateId}'.";
-        }
-
-        private void RefreshFileList() => _roomFiles = RoomLibraryIO.ListRoomFiles();
-
-        private static int ParseIntOrDefault(string s, int fallback) => int.TryParse(s, out int v) ? Mathf.Max(3, v) : fallback;
-
-        private void OnGUI()
-        {
-            GUILayout.BeginArea(new Rect(0, 0, panelWidth, Screen.height), GUI.skin.box);
-            _panelScroll = GUILayout.BeginScrollView(_panelScroll);
-
-            GUILayout.Label("Room Builder");
-            GUILayout.Space(6);
-
-            DrawNewRoomSection();
-            GUILayout.Space(8);
-            DrawSaveLoadSection();
-            GUILayout.Space(8);
-            DrawTagSection();
-            GUILayout.Space(8);
-            DrawRoomDefaultsSection();
-            GUILayout.Space(8);
-            DrawWeightsSection();
-            GUILayout.Space(8);
-
-            GUILayout.Label(_statusMessage);
-
-            GUILayout.EndScrollView();
-            GUILayout.EndArea();
-        }
-
-        private void DrawNewRoomSection()
-        {
-            GUILayout.Label("New Room (min 3x3)");
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("W", GUILayout.Width(14));
-            _newWidthField = GUILayout.TextField(_newWidthField, GUILayout.Width(40));
-            GUILayout.Label("H", GUILayout.Width(14));
-            _newHeightField = GUILayout.TextField(_newHeightField, GUILayout.Width(40));
-            GUILayout.EndHorizontal();
-            if (GUILayout.Button("Create New Room")) CreateNewRoom();
-        }
-
-        private void DrawSaveLoadSection()
-        {
-            GUILayout.Label("Save / Load");
-            GUILayout.Label("Template Id");
-            _templateIdField = GUILayout.TextField(_templateIdField);
-
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Save")) SaveRoom();
-            if (GUILayout.Button("Refresh List")) RefreshFileList();
-            GUILayout.EndHorizontal();
-
-            _fileListScroll = GUILayout.BeginScrollView(_fileListScroll, GUILayout.Height(100));
-            foreach (var file in _roomFiles)
-            {
-                if (GUILayout.Button(Path.GetFileNameWithoutExtension(file)))
-                    LoadRoom(file);
-            }
-            GUILayout.EndScrollView();
-        }
-
-        private void DrawTagSection()
-        {
-            if (_state == null) { GUILayout.Label("(create or load a room first)"); return; }
-
-            GUILayout.Label("Type Tags");
-            GUILayout.BeginHorizontal();
-            _typeTagField = GUILayout.TextField(_typeTagField);
-            if (GUILayout.Button("Add", GUILayout.Width(40)) && !string.IsNullOrWhiteSpace(_typeTagField))
-            {
-                _state.typeTags.Add(_typeTagField.Trim());
-                _typeTagField = "";
-            }
-            GUILayout.EndHorizontal();
-            DrawTagList(_state.typeTags);
-
-            GUILayout.Label("Zone Tags (reserved)");
-            GUILayout.BeginHorizontal();
-            _zoneTagField = GUILayout.TextField(_zoneTagField);
-            if (GUILayout.Button("Add", GUILayout.Width(40)) && !string.IsNullOrWhiteSpace(_zoneTagField))
-            {
-                _state.zoneTags.Add(_zoneTagField.Trim());
-                _zoneTagField = "";
-            }
-            GUILayout.EndHorizontal();
-            DrawTagList(_state.zoneTags);
-        }
-
-        private void DrawTagList(List<string> tags)
-        {
-            for (int i = tags.Count - 1; i >= 0; i--)
-            {
-                GUILayout.BeginHorizontal();
-                GUILayout.Label(tags[i]);
-                if (GUILayout.Button("x", GUILayout.Width(22))) tags.RemoveAt(i);
-                GUILayout.EndHorizontal();
-            }
-        }
-
-        private void DrawRoomDefaultsSection()
-        {
-            if (_state == null) return;
-
-            GUILayout.Label("Preferred Single Door Def (used for generated connections)");
-            DrawDefBrushButtons(DefDatabase.All<DoorDef>(), _state.preferredSingleDoorDef, v => _state.preferredSingleDoorDef = v);
-            if (GUILayout.Button("Clear (use generator default)")) _state.preferredSingleDoorDef = null;
-
-            GUILayout.Space(4);
-
-            GUILayout.Label("Preferred Double Door Def (used for generated connections)");
-            DrawDefBrushButtons(DefDatabase.All<DoorDef>(), _state.preferredDoubleDoorDef, v => _state.preferredDoubleDoorDef = v);
-            if (GUILayout.Button("Clear (use generator default)")) _state.preferredDoubleDoorDef = null;
-        }
-
-        private void DrawWeightsSection()
-        {
-            if (_state == null) return;
-            GUILayout.Label("Generation Weights");
-
-            GUILayout.Label($"Desired Connections: {_state.desiredConnections}");
-            _state.desiredConnections = Mathf.RoundToInt(GUILayout.HorizontalSlider(_state.desiredConnections, 1, 8));
-
-            GUILayout.Label($"Chance To Connect (below target): {_state.chanceToConnectWhenBelowTarget:0.00}");
-            _state.chanceToConnectWhenBelowTarget = GUILayout.HorizontalSlider(_state.chanceToConnectWhenBelowTarget, 0f, 1f);
-
-            GUILayout.Label($"Extra Connection Chance: {_state.extraConnectionChance:0.00}");
-            _state.extraConnectionChance = GUILayout.HorizontalSlider(_state.extraConnectionChance, 0f, 1f);
-
-            GUILayout.Label($"Selection Weight: {_state.selectionWeight:0.00}");
-            _state.selectionWeight = GUILayout.HorizontalSlider(_state.selectionWeight, 0.1f, 5f);
-        }
-
-        private void DrawDefBrushButtons<T>(IReadOnlyList<T> defs, string current, System.Action<string> onPick) where T : Def
-        {
-            if (defs.Count == 0)
-            {
-                GUILayout.Label("no defs found");
-                return;
-            }
-            foreach (var def in defs)
-            {
-                bool selected = def.DefName == current;
-
-                GUI.backgroundColor = selected ? Color.cyan : Color.white;
-                if (GUILayout.Button(def.DefName)) onPick(def.DefName);
-            }
-            GUI.backgroundColor = Color.white;
-        }
-
-        public void SetActiveTool(BuilderTool tool)
-        {
-            _tool = tool;
-            visuals.SetConnectorOverlayVisible(_tool == BuilderTool.Connector);
-            visuals.ClearPreview();
-        }
-
-        public void SetFloorDefBrush(string defName)
-        {
-            _floorBrushType = FloorType.Floor;
-            _floorDefBrush = defName;
-        }
-
-        public void SetLiquidDefBrush(string defName)
-        {
-            _floorBrushType = FloorType.Liquid;
-            _floorDefBrush = defName;
-        }
-
-        public void SetWallDefBrush(string defName)
-        {
-            _normalBrushType = NormalType.Wall;
-            _wallDefBrush = defName;
-        }
-
-        public void SetDoorDefBrush(string defName)
-        {
-            _normalBrushType = NormalType.Door;
-            _doorDefBrush = defName;
-        }
-
-        public void SetPropBrush(string defName) => _currentPropId = defName;
-
-        public void SetConnectorBrush(ConnectorType type) => _connectorBrush = type;
     }
 }

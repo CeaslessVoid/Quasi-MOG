@@ -41,7 +41,6 @@ Shader "Custom/MaskedTintSprite"
             TEXTURE2D(_MaskTex); SAMPLER(sampler_MaskTex);
 
             CBUFFER_START(UnityPerMaterial)
-            float4 _MainTex_ST;
             float4 _Color;
             float4 _SecondaryColor;
             float _HasMask;
@@ -51,7 +50,7 @@ Shader "Custom/MaskedTintSprite"
             {
                 v2f o;
                 o.vertex = TransformObjectToHClip(v.vertex.xyz);
-                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                o.uv = v.uv;
                 o.color = v.color;
                 return o;
             }
