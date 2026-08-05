@@ -10152,7 +10152,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1500384756
 RectTransform:
   m_ObjectHideFlags: 0
@@ -12299,11 +12299,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RoomGen.UI.RoomIOPanel
   controller: {fileID: 972222633}
   widthInput: {fileID: 1472583698}
-  heightInput: {fileID: 1472583698}
+  heightInput: {fileID: 1151670544}
   templateIdInput: {fileID: 1489457114}
   createButton: {fileID: 375218023}
   saveButton: {fileID: 661276623}
-  searchInput: {fileID: 0}
+  searchInput: {fileID: 2117719761}
   roomListView: {fileID: 1664935636}
   statusText: {fileID: 1074134822}
 --- !u!1 &2041546268
