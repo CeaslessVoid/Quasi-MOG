@@ -31,6 +31,12 @@ namespace RoomGen
         private Vector2Int? _lastPaintCellLeft;
         private Vector2Int? _lastPaintCellRight;
 
+        public int CurrentDesiredConnections => _state != null ? _state.desiredConnections : 0;
+        public float CurrentExtraConnectionChance => _state != null ? _state.extraConnectionChance : 0f;
+        public float CurrentChanceToConnectWhenBelowTarget => _state != null ? _state.chanceToConnectWhenBelowTarget : 0f;
+        public float CurrentSelectionWeight => _state != null ? _state.selectionWeight : 0f;
+
+        
         private readonly List<(Vector2Int cell, bool valid)> _singleCellScratch = new List<(Vector2Int, bool)>(1);
         private readonly List<(Vector2Int cell, bool valid)> _propPreviewScratch = new List<(Vector2Int, bool)>();
 
@@ -71,6 +77,10 @@ namespace RoomGen
             visuals.SetConnectorOverlayVisible(_tool == BuilderTool.Connector);
             visuals.ClearPreview();
         }
+        public void SetDesiredConnections(int value) { if (_state != null) _state.desiredConnections = Mathf.Max(0, value); }
+        public void SetExtraConnectionChance(float value) { if (_state != null) _state.extraConnectionChance = Mathf.Clamp01(value); }
+        public void SetChanceToConnectWhenBelowTarget(float value) { if (_state != null) _state.chanceToConnectWhenBelowTarget = Mathf.Clamp01(value); }
+        public void SetSelectionWeight(float value) { if (_state != null) _state.selectionWeight = Mathf.Max(0f, value); }
 
         public void ClearActiveTool() => SetActiveTool(BuilderTool.None);
 
@@ -180,7 +190,7 @@ namespace RoomGen
             {
                 if (Input.GetMouseButtonDown(0)) PlaceProp(cx, cy);
                 if (Input.GetMouseButtonDown(1)) RemovePropAt(cx, cy);
-                if (!IsTypingInField && Input.GetKeyDown(KeyCode.R))
+                if (!InputFocusUtility.IsTypingInField && Input.GetKeyDown(KeyCode.R))
                     _currentPropFacing = (PropFacing)(((int)_currentPropFacing + 1) % 4);
                 return;
             }
@@ -203,8 +213,6 @@ namespace RoomGen
             }
             else _lastPaintCellRight = null;
         }
-
-        private bool IsTypingInField => GUIUtility.keyboardControl != 0;
 
         private void UpdatePreview(int cx, int cy)
         {

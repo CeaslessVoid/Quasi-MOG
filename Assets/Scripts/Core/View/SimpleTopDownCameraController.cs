@@ -26,7 +26,7 @@ namespace RoomGen
 
         private void Update()
         {
-            if (targetCamera == null || IsTypingInField) return;
+            if (targetCamera == null || InputFocusUtility.IsTypingInField) return;
 
             Vector3 move = Vector3.zero;
             if (Input.GetKey(KeyCode.W)) move.y += 1f;
@@ -50,7 +50,5 @@ namespace RoomGen
                     targetCamera.orthographicSize = Mathf.Clamp(targetCamera.orthographicSize - scroll * zoomSpeed, minZoom, maxZoom);
             }
         }
-
-        private static bool IsTypingInField => GUIUtility.keyboardControl != 0;
     }
 }

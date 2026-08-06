@@ -35,13 +35,11 @@ namespace RoomGen.UI
         [SerializeField] private Toggle includeWallPropsToggle;
 
         [Header("Auto-Hide On Drag")]
-        [SerializeField] private bool debugDrawThresholds = true;
-        [SerializeField] private float hideThresholdY = 900f;
-        [SerializeField] private float showThresholdY = 500f;
-        [SerializeField] private float showThresholdX = 150f;
-        [SerializeField] private RectTransform debugHideLine;
-        [SerializeField] private RectTransform debugShowLineY;
-        [SerializeField] private RectTransform debugShowLineX;
+        [SerializeField] private bool drawGizmos = true;
+        [SerializeField] private Camera worldCamera;
+        [SerializeField] private float hideThresholdY = 650f;
+        [SerializeField] private float showThresholdY = 550f;
+        [SerializeField] private float showThresholdX = 220f;
 
         private static readonly string[] NormalCategoryLabels = { "Walls", "Doors" };
         private static readonly string[] PropCategoryLabels =
@@ -83,12 +81,14 @@ namespace RoomGen.UI
                 includeWallPropsToggle.onValueChanged.AddListener(_ => RefreshList());
             }
 
-            sidePanelRoot.SetActive(false);
+            if (sidePanelVisibilityGroup != null)
+            {
+                sidePanelVisibilityGroup.alpha = 0f;
+                sidePanelVisibilityGroup.interactable = false;
+                sidePanelVisibilityGroup.blocksRaycasts = false;
+            }
 
-            if (debugHideLine != null) debugHideLine.gameObject.SetActive(debugDrawThresholds);
-            if (debugShowLineY != null) debugShowLineY.gameObject.SetActive(debugDrawThresholds);
-            if (debugShowLineX != null) debugShowLineX.gameObject.SetActive(debugDrawThresholds);
-            PositionDebugLines();
+            sidePanelRoot.SetActive(false);
         }
 
         private void Update()
@@ -177,22 +177,36 @@ namespace RoomGen.UI
             switch (_activeTool)
             {
                 case BuilderTool.Floor:
-                    defListPanel.Populate(BuildFloorItems(), name => name == controller.CurrentFloorDefBrush);
+                    var floorItems = BuildFloorItems();
+                    Debug.Log($"RoomBuilderUIController: RefreshList Floor items={floorItems.Count}");
+                    defListPanel.Populate(floorItems, name => name == controller.CurrentFloorDefBrush);
                     break;
 
                 case BuilderTool.Normal:
                     if (_normalCategoryIndex == 1)
-                        defListPanel.Populate(BuildDoorItems(), name => name == controller.CurrentDoorDefBrush);
+                    {
+                        var doorItems = BuildDoorItems();
+                        Debug.Log($"RoomBuilderUIController: RefreshList Doors items={doorItems.Count}");
+                        defListPanel.Populate(doorItems, name => name == controller.CurrentDoorDefBrush);
+                    }
                     else
-                        defListPanel.Populate(BuildWallItems(), name => name == controller.CurrentWallDefBrush);
+                    {
+                        var wallItems = BuildWallItems();
+                        Debug.Log($"RoomBuilderUIController: RefreshList Walls items={wallItems.Count}");
+                        defListPanel.Populate(wallItems, name => name == controller.CurrentWallDefBrush);
+                    }
                     break;
 
                 case BuilderTool.Prop:
-                    defListPanel.Populate(BuildPropItems(), name => name == controller.CurrentPropDefBrush);
+                    var propItems = BuildPropItems();
+                    Debug.Log($"RoomBuilderUIController: RefreshList Props items={propItems.Count}");
+                    defListPanel.Populate(propItems, name => name == controller.CurrentPropDefBrush);
                     break;
 
                 case BuilderTool.Connector:
-                    defListPanel.Populate(BuildConnectorItems(), name => name == controller.CurrentConnectorBrush.ToString());
+                    var connectorItems = BuildConnectorItems();
+                    Debug.Log($"RoomBuilderUIController: RefreshList Connector items={connectorItems.Count}");
+                    defListPanel.Populate(connectorItems, name => name == controller.CurrentConnectorBrush.ToString());
                     break;
             }
         }
@@ -257,15 +271,20 @@ namespace RoomGen.UI
 
         private void UpdateDragVisibility()
         {
-            if (debugDrawThresholds) PositionDebugLines();
             if (sidePanelVisibilityGroup == null || !IsSidePanelOpen) return;
 
             Vector2 mouse = Input.mousePosition;
 
-            if (!_hiddenByDrag && mouse.y >= hideThresholdY)
-                _hiddenByDrag = true;
-            else if (_hiddenByDrag && (mouse.y <= showThresholdY || mouse.x <= showThresholdX))
-                _hiddenByDrag = false;
+            if (!_hiddenByDrag)
+            {
+                if (mouse.y >= hideThresholdY) _hiddenByDrag = true;
+            }
+            else
+            {
+                bool showByY = mouse.y <= showThresholdY;
+                bool showByX = mouse.x <= showThresholdX && mouse.y < hideThresholdY;
+                if (showByY || showByX) _hiddenByDrag = false;
+            }
 
             bool visible = !_hiddenByDrag;
             sidePanelVisibilityGroup.alpha = visible ? 1f : 0f;
@@ -273,29 +292,33 @@ namespace RoomGen.UI
             sidePanelVisibilityGroup.blocksRaycasts = visible;
         }
 
-        private void PositionDebugLines()
+        private void OnDrawGizmos()
         {
-            PositionHorizontalLine(debugHideLine, hideThresholdY, Color.red);
-            PositionHorizontalLine(debugShowLineY, showThresholdY, new Color(0.2f, 1f, 0.3f));
-            PositionVerticalLine(debugShowLineX, showThresholdX, new Color(0.3f, 0.6f, 1f));
+            if (!drawGizmos) return;
+            var cam = worldCamera != null ? worldCamera : Camera.main;
+            if (cam == null) return;
+
+            float depth = Mathf.Abs(cam.transform.position.z);
+
+            DrawHorizontalGizmoLine(cam, hideThresholdY, depth, Color.red);
+            DrawHorizontalGizmoLine(cam, showThresholdY, depth, new Color(0.2f, 1f, 0.3f));
+            DrawVerticalGizmoLine(cam, showThresholdX, depth, new Color(0.3f, 0.6f, 1f));
         }
 
-        private void PositionHorizontalLine(RectTransform line, float screenY, Color color)
+        private void DrawHorizontalGizmoLine(Camera cam, float screenY, float depth, Color color)
         {
-            if (line == null) return;
-            var canvasRect = (RectTransform)line.parent;
-            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, new Vector2(0f, screenY), null, out var local);
-            line.anchoredPosition = new Vector2(line.anchoredPosition.x, local.y);
-            if (line.TryGetComponent<Image>(out var img)) img.color = color;
+            Gizmos.color = color;
+            Vector3 left = cam.ScreenToWorldPoint(new Vector3(0f, screenY, depth));
+            Vector3 right = cam.ScreenToWorldPoint(new Vector3(cam.pixelWidth, screenY, depth));
+            Gizmos.DrawLine(left, right);
         }
 
-        private void PositionVerticalLine(RectTransform line, float screenX, Color color)
+        private void DrawVerticalGizmoLine(Camera cam, float screenX, float depth, Color color)
         {
-            if (line == null) return;
-            var canvasRect = (RectTransform)line.parent;
-            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, new Vector2(screenX, 0f), null, out var local);
-            line.anchoredPosition = new Vector2(local.x, line.anchoredPosition.y);
-            if (line.TryGetComponent<Image>(out var img)) img.color = color;
+            Gizmos.color = color;
+            Vector3 bottom = cam.ScreenToWorldPoint(new Vector3(screenX, 0f, depth));
+            Vector3 top = cam.ScreenToWorldPoint(new Vector3(screenX, cam.pixelHeight, depth));
+            Gizmos.DrawLine(bottom, top);
         }
     }
 }

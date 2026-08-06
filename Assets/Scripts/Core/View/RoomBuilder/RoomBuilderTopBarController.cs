@@ -10,10 +10,12 @@ namespace RoomGen.UI
         [SerializeField] private Button roomIOButton;
         [SerializeField] private Button tagsButton;
         [SerializeField] private Button doorDefaultsButton;
+        [SerializeField] private Button weightsButton;
 
         [SerializeField] private GameObject roomIOPanel;
         [SerializeField] private GameObject tagsPanel;
         [SerializeField] private GameObject doorDefaultsPanel;
+        [SerializeField] private GameObject weightsPanel;
 
         [SerializeField] private Color activeColor = new Color(0.25f, 0.65f, 1f);
         [SerializeField] private Color inactiveColor = Color.white;
@@ -26,10 +28,12 @@ namespace RoomGen.UI
             roomIOButton.onClick.AddListener(() => Toggle(roomIOPanel, roomIOButton));
             tagsButton.onClick.AddListener(() => Toggle(tagsPanel, tagsButton));
             doorDefaultsButton.onClick.AddListener(() => Toggle(doorDefaultsPanel, doorDefaultsButton));
+            weightsButton.onClick.AddListener(() => Toggle(weightsPanel, weightsButton));
 
             roomIOPanel.SetActive(false);
             tagsPanel.SetActive(false);
             doorDefaultsPanel.SetActive(false);
+            weightsPanel.SetActive(false);
         }
 
         private void Toggle(GameObject panel, Button button)

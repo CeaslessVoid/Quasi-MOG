@@ -24,6 +24,7 @@ namespace RoomGen.UI
                 return;
             }
 
+            Debug.Log($"DefListPanel.Populate: items={items.Count}, poolSizeBefore={_pool.Count}");
             EnsurePoolSize(items.Count);
 
             for (int i = 0; i < items.Count; i++)
