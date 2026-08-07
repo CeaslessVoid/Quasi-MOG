@@ -27,7 +27,6 @@ namespace RoomGen
         public List<PropPlacement> props = new List<PropPlacement>();
 
         public int desiredConnections = 2;
-        public float extraConnectionChance = 0.15f;
         public float chanceToConnectWhenBelowTarget = 0.9f;
         public float selectionWeight = 1f;
 
@@ -69,7 +68,6 @@ namespace RoomGen
                 preferredDoubleDoorDef = preferredDoubleDoorDef,
                 props = new List<PropPlacement>(props),
                 desiredConnections = desiredConnections,
-                extraConnectionChance = extraConnectionChance,
                 chanceToConnectWhenBelowTarget = chanceToConnectWhenBelowTarget,
                 selectionWeight = selectionWeight
             };

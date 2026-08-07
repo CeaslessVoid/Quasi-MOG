@@ -99,7 +99,8 @@ namespace RoomGen
 
                 var ownerRoom = _grid.PlacedRooms.First(r => r.id == targetRun.ownerRoomId);
                 bool wantsMore = ownerRoom.ResolvedConnectionCount < ownerRoom.template.desiredConnections;
-                float chance = wantsMore ? ownerRoom.template.chanceToConnectWhenBelowTarget : ownerRoom.template.extraConnectionChance;
+
+                float chance = ownerRoom.template.chanceToConnectWhenBelowTarget;
 
                 if (roomsPlaced >= desiredRoomCount)
                 {

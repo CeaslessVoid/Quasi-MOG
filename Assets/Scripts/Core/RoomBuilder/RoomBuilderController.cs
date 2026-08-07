@@ -32,7 +32,6 @@ namespace RoomGen
         private Vector2Int? _lastPaintCellRight;
 
         public int CurrentDesiredConnections => _state != null ? _state.desiredConnections : 0;
-        public float CurrentExtraConnectionChance => _state != null ? _state.extraConnectionChance : 0f;
         public float CurrentChanceToConnectWhenBelowTarget => _state != null ? _state.chanceToConnectWhenBelowTarget : 0f;
         public float CurrentSelectionWeight => _state != null ? _state.selectionWeight : 0f;
 
@@ -78,7 +77,6 @@ namespace RoomGen
             visuals.ClearPreview();
         }
         public void SetDesiredConnections(int value) { if (_state != null) _state.desiredConnections = Mathf.Max(0, value); }
-        public void SetExtraConnectionChance(float value) { if (_state != null) _state.extraConnectionChance = Mathf.Clamp01(value); }
         public void SetChanceToConnectWhenBelowTarget(float value) { if (_state != null) _state.chanceToConnectWhenBelowTarget = Mathf.Clamp01(value); }
         public void SetSelectionWeight(float value) { if (_state != null) _state.selectionWeight = Mathf.Max(0f, value); }
 

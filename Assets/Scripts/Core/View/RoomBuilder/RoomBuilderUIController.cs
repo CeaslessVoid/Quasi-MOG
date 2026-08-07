@@ -178,7 +178,6 @@ namespace RoomGen.UI
             {
                 case BuilderTool.Floor:
                     var floorItems = BuildFloorItems();
-                    Debug.Log($"RoomBuilderUIController: RefreshList Floor items={floorItems.Count}");
                     defListPanel.Populate(floorItems, name => name == controller.CurrentFloorDefBrush);
                     break;
 
@@ -186,26 +185,22 @@ namespace RoomGen.UI
                     if (_normalCategoryIndex == 1)
                     {
                         var doorItems = BuildDoorItems();
-                        Debug.Log($"RoomBuilderUIController: RefreshList Doors items={doorItems.Count}");
                         defListPanel.Populate(doorItems, name => name == controller.CurrentDoorDefBrush);
                     }
                     else
                     {
                         var wallItems = BuildWallItems();
-                        Debug.Log($"RoomBuilderUIController: RefreshList Walls items={wallItems.Count}");
                         defListPanel.Populate(wallItems, name => name == controller.CurrentWallDefBrush);
                     }
                     break;
 
                 case BuilderTool.Prop:
                     var propItems = BuildPropItems();
-                    Debug.Log($"RoomBuilderUIController: RefreshList Props items={propItems.Count}");
                     defListPanel.Populate(propItems, name => name == controller.CurrentPropDefBrush);
                     break;
 
                 case BuilderTool.Connector:
                     var connectorItems = BuildConnectorItems();
-                    Debug.Log($"RoomBuilderUIController: RefreshList Connector items={connectorItems.Count}");
                     defListPanel.Populate(connectorItems, name => name == controller.CurrentConnectorBrush.ToString());
                     break;
             }

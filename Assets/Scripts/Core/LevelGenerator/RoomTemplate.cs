@@ -28,7 +28,6 @@ namespace RoomGen
         public string GetFloorDef(int x, int y) => data.GetFloorDef(x, y);
 
         public int desiredConnections => data.desiredConnections;
-        public float extraConnectionChance => data.extraConnectionChance;
         public float chanceToConnectWhenBelowTarget => data.chanceToConnectWhenBelowTarget;
         public float selectionWeight => data.selectionWeight;
         public string preferredSingleDoorDef => data.preferredSingleDoorDef;

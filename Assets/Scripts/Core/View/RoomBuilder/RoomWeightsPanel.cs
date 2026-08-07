@@ -9,14 +9,12 @@ namespace RoomGen.UI
         [SerializeField] private RoomBuilderController controller;
 
         [SerializeField] private TMP_InputField desiredConnectionsInput;
-        [SerializeField] private TMP_InputField extraConnectionChanceInput;
         [SerializeField] private TMP_InputField chanceToConnectWhenBelowTargetInput;
         [SerializeField] private TMP_InputField selectionWeightInput;
 
         private void Awake()
         {
             desiredConnectionsInput.onEndEdit.AddListener(HandleDesiredConnections);
-            extraConnectionChanceInput.onEndEdit.AddListener(HandleExtraConnectionChance);
             chanceToConnectWhenBelowTargetInput.onEndEdit.AddListener(HandleChanceToConnectWhenBelowTarget);
             selectionWeightInput.onEndEdit.AddListener(HandleSelectionWeight);
         }
@@ -26,7 +24,6 @@ namespace RoomGen.UI
         private void RefreshFields()
         {
             desiredConnectionsInput.SetTextWithoutNotify(controller.CurrentDesiredConnections.ToString());
-            extraConnectionChanceInput.SetTextWithoutNotify(controller.CurrentExtraConnectionChance.ToString(CultureInfo.InvariantCulture));
             chanceToConnectWhenBelowTargetInput.SetTextWithoutNotify(controller.CurrentChanceToConnectWhenBelowTarget.ToString(CultureInfo.InvariantCulture));
             selectionWeightInput.SetTextWithoutNotify(controller.CurrentSelectionWeight.ToString(CultureInfo.InvariantCulture));
         }
@@ -34,12 +31,6 @@ namespace RoomGen.UI
         private void HandleDesiredConnections(string value)
         {
             if (int.TryParse(value, out int result)) controller.SetDesiredConnections(result);
-            RefreshFields();
-        }
-
-        private void HandleExtraConnectionChance(string value)
-        {
-            if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float result)) controller.SetExtraConnectionChance(result);
             RefreshFields();
         }
 

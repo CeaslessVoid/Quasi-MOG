@@ -15,7 +15,7 @@ namespace RoomGen.UI
 
         private void Awake()
         {
-            if (button == null) button = GetComponent<Button>();
+            if (button == null) button = GetComponentInChildren<Button>(true);
             button.onClick.AddListener(HandleClick);
         }
 
