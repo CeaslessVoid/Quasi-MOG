@@ -4208,7 +4208,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c24f9c3656161374e98302421a19c0d1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RoomGen.UI.RoomWeightsPanel
-  controller: {fileID: 972222633}
   desiredConnectionsInput: {fileID: 971606836}
   chanceToConnectWhenBelowTargetInput: {fileID: 2074415454}
   selectionWeightInput: {fileID: 1432398083}
@@ -10122,7 +10121,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 144ddbd4bfb15954ea6e659060c95d79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RoomGen.UI.RoomTagsPanel
-  controller: {fileID: 972222633}
   typeTagInput: {fileID: 864447752}
   typeTagAddButton: {fileID: 1038422634}
   typeTagListView: {fileID: 1778672093}
@@ -11449,15 +11447,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 122ae9449d55fe843b3a32173cb4757d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RoomGen.UI.RoomBuilderTopBarController
+  controller: {fileID: 972222633}
   sideUI: {fileID: 698047788}
-  roomIOButton: {fileID: 149323629}
-  tagsButton: {fileID: 299661314}
-  doorDefaultsButton: {fileID: 1257611485}
-  weightsButton: {fileID: 1259079658}
-  roomIOPanel: {fileID: 1989972357}
-  tagsPanel: {fileID: 1398503847}
-  doorDefaultsPanel: {fileID: 1739091855}
-  weightsPanel: {fileID: 616164826}
+  windowsGroup: {fileID: 1208877635}
+  windows:
+  - button: {fileID: 149323629}
+    panel: {fileID: 1989972357}
+  - button: {fileID: 1259079658}
+    panel: {fileID: 616164826}
+  - button: {fileID: 299661314}
+    panel: {fileID: 1398503847}
+  - button: {fileID: 1257611485}
+    panel: {fileID: 1739091855}
   activeColor: {r: 0.25, g: 0.65, b: 1, a: 1}
   inactiveColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!1 &1622879325
@@ -12612,7 +12613,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 84861006557ca244ab6822b9fb53fcc7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RoomGen.UI.RoomDoorDefaultsPanel
-  controller: {fileID: 972222633}
   singleDoorListView: {fileID: 2068462450}
   doubleDoorListView: {fileID: 2041546270}
 --- !u!1 &1742276895
@@ -13438,7 +13438,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ccf9ec64f5326aa4788ca66f7a07f062, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RoomGen.UI.RoomIOPanel
-  controller: {fileID: 972222633}
   widthInput: {fileID: 1472583698}
   heightInput: {fileID: 1151670544}
   templateIdInput: {fileID: 1489457114}

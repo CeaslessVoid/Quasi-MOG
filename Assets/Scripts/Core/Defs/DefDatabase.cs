@@ -14,14 +14,12 @@ namespace GameDefs
         [SerializeField] private List<Def> defs = new List<Def>();
 
         private static DefDatabase _instance;
-        private static bool _warnedMissingInstance;
         private readonly Dictionary<Type, Dictionary<string, Def>> _lookup = new Dictionary<Type, Dictionary<string, Def>>();
         private readonly Dictionary<Type, object> _allCacheTyped = new Dictionary<Type, object>();
 
         public void EnsureInitialized()
         {
             _instance = this;
-            _warnedMissingInstance = false;
             _lookup.Clear();
             _allCacheTyped.Clear();
 
@@ -40,16 +38,7 @@ namespace GameDefs
 
         public static T Get<T>(string defName) where T : Def
         {
-            if (_instance == null)
-            {
-                if (!_warnedMissingInstance)
-                {
-                    Debug.LogWarning("DefDatabase: no instance initialized yet. Ensure GameManager (or another EnsureInitialized() call) runs before defs are queried.");
-                    _warnedMissingInstance = true;
-                }
-                return null;
-            }
-
+            if (_instance == null) return null;
             if (string.IsNullOrEmpty(defName)) return null;
             if (_instance._lookup.TryGetValue(typeof(T), out var dict) && dict.TryGetValue(defName, out var def))
                 return (T)def;
@@ -82,7 +71,6 @@ namespace GameDefs
         {
             defs = FindAllDefs();
             EditorUtility.SetDirty(this);
-            Debug.Log($"DefDatabase: found {defs.Count} defs.");
         }
 
         private static List<Def> FindAllDefs()

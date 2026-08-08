@@ -1,61 +1,80 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace RoomGen.UI
 {
+    public abstract class TopBarWindowPanel : MonoBehaviour
+    {
+        protected RoomBuilderController Controller { get; private set; }
+
+        public void Initialize(RoomBuilderController controller)
+        {
+            Controller = controller;
+        }
+    }
+
+    [Serializable]
+    public struct TopBarWindow
+    {
+        public Button button;
+        public GameObject panel;
+    }
+
     public class RoomBuilderTopBarController : MonoBehaviour
     {
+        [SerializeField] private RoomBuilderController controller;
         [SerializeField] private RoomBuilderUIController sideUI;
-
-        [SerializeField] private Button roomIOButton;
-        [SerializeField] private Button tagsButton;
-        [SerializeField] private Button doorDefaultsButton;
-        [SerializeField] private Button weightsButton;
-
-        [SerializeField] private GameObject roomIOPanel;
-        [SerializeField] private GameObject tagsPanel;
-        [SerializeField] private GameObject doorDefaultsPanel;
-        [SerializeField] private GameObject weightsPanel;
+        [Tooltip("Empty parent object holding a CanvasGroup that all window panels live under. Windows are still individually SetActive(false) when closed - this group is not used to hide them.")]
+        [SerializeField] private CanvasGroup windowsGroup;
+        [SerializeField] private TopBarWindow[] windows;
 
         [SerializeField] private Color activeColor = new Color(0.25f, 0.65f, 1f);
         [SerializeField] private Color inactiveColor = Color.white;
 
-        private GameObject _openPanel;
-        private Button _openButton;
+        private int _openIndex = -1;
 
         private void Awake()
         {
-            roomIOButton.onClick.AddListener(() => Toggle(roomIOPanel, roomIOButton));
-            tagsButton.onClick.AddListener(() => Toggle(tagsPanel, tagsButton));
-            doorDefaultsButton.onClick.AddListener(() => Toggle(doorDefaultsPanel, doorDefaultsButton));
-            weightsButton.onClick.AddListener(() => Toggle(weightsPanel, weightsButton));
+            if (windowsGroup != null)
+            {
+                windowsGroup.interactable = true;
+                windowsGroup.blocksRaycasts = true;
+                windowsGroup.alpha = 1f;
+            }
 
-            roomIOPanel.SetActive(false);
-            tagsPanel.SetActive(false);
-            doorDefaultsPanel.SetActive(false);
-            weightsPanel.SetActive(false);
+            for (int i = 0; i < windows.Length; i++)
+            {
+                int index = i;
+                windows[i].button.onClick.AddListener(() => Toggle(index));
+
+                var panel = windows[i].panel.GetComponent<TopBarWindowPanel>();
+                if (panel != null) panel.Initialize(controller);
+
+                windows[i].panel.SetActive(false);
+            }
         }
 
-        private void Toggle(GameObject panel, Button button)
+        private void Toggle(int index)
         {
-            bool wasOpen = _openPanel == panel;
+            bool wasOpen = _openIndex == index;
             CloseAll();
-
             if (wasOpen) return;
 
-            panel.SetActive(true);
-            SetButtonColor(button, true);
-            _openPanel = panel;
-            _openButton = button;
+            windows[index].panel.SetActive(true);
+            SetButtonColor(windows[index].button, true);
+            _openIndex = index;
             sideUI.CloseSidePanel();
         }
 
         public void CloseAll()
         {
-            if (_openPanel != null) _openPanel.SetActive(false);
-            if (_openButton != null) SetButtonColor(_openButton, false);
-            _openPanel = null;
-            _openButton = null;
+            for (int i = 0; i < windows.Length; i++)
+            {
+                windows[i].panel.SetActive(false);
+                SetButtonColor(windows[i].button, false);
+            }
+            _openIndex = -1;
         }
 
         private void SetButtonColor(Button button, bool active)

@@ -4,9 +4,8 @@ using GameDefs;
 
 namespace RoomGen.UI
 {
-    public class RoomDoorDefaultsPanel : MonoBehaviour
+    public class RoomDoorDefaultsPanel : TopBarWindowPanel
     {
-        [SerializeField] private RoomBuilderController controller;
         [SerializeField] private SimpleButtonListView singleDoorListView;
         [SerializeField] private SimpleButtonListView doubleDoorListView;
 
@@ -17,10 +16,10 @@ namespace RoomGen.UI
             var doors = DefDatabase.All<DoorDef>();
 
             singleDoorListView.Populate(doors.Select(d =>
-                new SimpleButtonItem(d.DisplayName, () => { controller.SetPreferredSingleDoorDef(d.DefName); RefreshLists(); })).ToList());
+                new SimpleButtonItem(d.DisplayName, () => { Controller.SetPreferredSingleDoorDef(d.DefName); RefreshLists(); })).ToList());
 
             doubleDoorListView.Populate(doors.Select(d =>
-                new SimpleButtonItem(d.DisplayName, () => { controller.SetPreferredDoubleDoorDef(d.DefName); RefreshLists(); })).ToList());
+                new SimpleButtonItem(d.DisplayName, () => { Controller.SetPreferredDoubleDoorDef(d.DefName); RefreshLists(); })).ToList());
         }
     }
 }

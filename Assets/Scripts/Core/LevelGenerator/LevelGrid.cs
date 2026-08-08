@@ -4,9 +4,103 @@ using GameDefs;
 
 namespace RoomGen
 {
-    public class LevelGrid
+    public interface ILevelCellSource
+    {
+        LevelCell GetCell(Vector2Int pos);
+    }
+
+    public static class LevelCellQueries
+    {
+        public static bool IsWallBlocking(this ILevelCellSource src, Vector2Int cell) =>
+            src.GetCell(cell).normal == NormalType.Wall;
+
+        public static bool IsVisionBlocking(this ILevelCellSource src, Vector2Int cell)
+        {
+            var data = src.GetCell(cell);
+            if (data.normal != NormalType.Wall) return false;
+            var wallDef = DefDatabase.Get<WallDef>(data.wallDef);
+            return wallDef == null || wallDef.BlocksVision;
+        }
+
+        public static bool IsNorthOrientedDoor(this ILevelCellSource src, Vector2Int cell)
+        {
+            bool n = src.IsWallBlocking(cell + Vector2Int.up);
+            bool e = src.IsWallBlocking(cell + Vector2Int.right);
+            bool s = src.IsWallBlocking(cell + Vector2Int.down);
+            bool w = src.IsWallBlocking(cell + Vector2Int.left);
+            return WallAtlas.IsNorthOriented(n, e, s, w);
+        }
+
+        public static bool IsAdjacentToDoor(this ILevelCellSource src, Vector2Int cell)
+        {
+            return src.GetCell(cell + Vector2Int.up).normal == NormalType.Door
+                || src.GetCell(cell + Vector2Int.down).normal == NormalType.Door
+                || src.GetCell(cell + Vector2Int.left).normal == NormalType.Door
+                || src.GetCell(cell + Vector2Int.right).normal == NormalType.Door;
+        }
+
+        public static bool IsMatchingDoor(this ILevelCellSource src, Vector2Int cell, string doorDefName)
+        {
+            var c = src.GetCell(cell);
+            return c.normal == NormalType.Door && c.doorDef == doorDefName;
+        }
+
+        public static bool TryFindDoorPartner(this ILevelCellSource src, Vector2Int cell, string doorDefName, out Vector2Int partner)
+        {
+            bool isNorthOrientation = src.IsNorthOrientedDoor(cell);
+
+            if (isNorthOrientation)
+            {
+                var east = cell + Vector2Int.right;
+                var west = cell + Vector2Int.left;
+                if (src.IsMatchingDoor(east, doorDefName)) { partner = east; return true; }
+                if (src.IsMatchingDoor(west, doorDefName)) { partner = west; return true; }
+            }
+            else
+            {
+                var north = cell + Vector2Int.up;
+                var south = cell + Vector2Int.down;
+                if (src.IsMatchingDoor(north, doorDefName)) { partner = north; return true; }
+                if (src.IsMatchingDoor(south, doorDefName)) { partner = south; return true; }
+            }
+
+            partner = default;
+            return false;
+        }
+
+        public static IEnumerable<Vector2Int> TraceLine(this ILevelCellSource src, Vector2Int from, Vector2Int to)
+        {
+            int x0 = from.x, y0 = from.y, x1 = to.x, y1 = to.y;
+            int dx = Mathf.Abs(x1 - x0), dy = -Mathf.Abs(y1 - y0);
+            int sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+            int err = dx + dy;
+
+            while (true)
+            {
+                yield return new Vector2Int(x0, y0);
+                if (x0 == x1 && y0 == y1) yield break;
+                int e2 = 2 * err;
+                if (e2 >= dy) { err += dy; x0 += sx; }
+                if (e2 <= dx) { err += dx; y0 += sy; }
+            }
+        }
+
+        public static bool HasLineOfSight(this ILevelCellSource src, Vector2Int from, Vector2Int to)
+        {
+            foreach (var cell in src.TraceLine(from, to))
+            {
+                if (cell == from) continue;
+                if (cell == to) return true;
+                if (src.IsVisionBlocking(cell)) return false;
+            }
+            return true;
+        }
+    }
+
+    public class LevelGridBuilder : ILevelCellSource
     {
         private readonly Dictionary<Vector2Int, LevelCell> _cells = new Dictionary<Vector2Int, LevelCell>();
+        private readonly Dictionary<int, PlacedRoom> _roomsById = new Dictionary<int, PlacedRoom>();
         public List<PlacedRoom> PlacedRooms { get; } = new List<PlacedRoom>();
         private int _nextRoomId = 0;
 
@@ -14,7 +108,7 @@ namespace RoomGen
 
         public LevelCell GetCell(Vector2Int pos) => _cells.TryGetValue(pos, out var c) ? c : LevelCell.Empty;
 
-        public bool HasCell(Vector2Int pos) => _cells.ContainsKey(pos);
+        public PlacedRoom GetRoom(int id) => _roomsById[id];
 
         public bool CanPlace(RoomTemplate t, Vector2Int origin, int rotationDeg)
         {
@@ -121,6 +215,7 @@ namespace RoomGen
             }
 
             PlacedRooms.Add(room);
+            _roomsById[room.id] = room;
             return room;
         }
 
@@ -183,54 +278,71 @@ namespace RoomGen
             SetNormal(eligible[index], NormalType.Door, singleDoorDef);
             return DoorSize.Single1x1;
         }
+    }
 
-        public bool IsAdjacentToDoor(Vector2Int cell)
+    public class LevelGrid : ILevelCellSource
+    {
+        private readonly LevelCell[] _cells;
+
+        public int Width { get; }
+        public int Height { get; }
+        public Vector2Int Origin { get; }
+        public IReadOnlyList<PlacedRoom> PlacedRooms { get; }
+
+        internal LevelGrid(LevelCell[] cells, int width, int height, Vector2Int origin, List<PlacedRoom> placedRooms)
         {
-            return GetCell(cell + Vector2Int.up).normal == NormalType.Door
-                || GetCell(cell + Vector2Int.down).normal == NormalType.Door
-                || GetCell(cell + Vector2Int.left).normal == NormalType.Door
-                || GetCell(cell + Vector2Int.right).normal == NormalType.Door;
+            _cells = cells;
+            Width = width;
+            Height = height;
+            Origin = origin;
+            PlacedRooms = placedRooms;
         }
 
-        public bool IsWallBlocking(Vector2Int cell) => GetCell(cell).normal == NormalType.Wall;
-
-        public bool IsNorthOrientedDoor(Vector2Int cell)
+        public bool InBounds(Vector2Int pos)
         {
-            bool northSouthOpen = !IsWallBlocking(cell + Vector2Int.up) && !IsWallBlocking(cell + Vector2Int.down);
-            bool eastWestOpen = !IsWallBlocking(cell + Vector2Int.right) && !IsWallBlocking(cell + Vector2Int.left);
-
-            if (northSouthOpen && !eastWestOpen) return true;
-            if (eastWestOpen && !northSouthOpen) return false;
-            return true;
+            int lx = pos.x - Origin.x;
+            int ly = pos.y - Origin.y;
+            return lx >= 0 && ly >= 0 && lx < Width && ly < Height;
         }
 
-        public bool IsMatchingDoor(Vector2Int cell, string doorDefName)
+        public LevelCell GetCell(Vector2Int pos)
         {
-            var c = GetCell(cell);
-            return c.normal == NormalType.Door && c.doorDef == doorDefName;
+            int lx = pos.x - Origin.x;
+            int ly = pos.y - Origin.y;
+            if (lx < 0 || ly < 0 || lx >= Width || ly >= Height) return LevelCell.Empty;
+            return _cells[ly * Width + lx];
         }
+    }
 
-        public bool TryFindDoorPartner(Vector2Int cell, string doorDefName, out Vector2Int partner)
+    public static class LevelGridBaker
+    {
+        public static LevelGrid Bake(LevelGridBuilder builder)
         {
-            bool isNorthOrientation = IsNorthOrientedDoor(cell);
+            if (builder.Cells.Count == 0)
+                return new LevelGrid(System.Array.Empty<LevelCell>(), 0, 0, Vector2Int.zero, builder.PlacedRooms);
 
-            if (isNorthOrientation)
+            int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
+            foreach (var pos in builder.Cells.Keys)
             {
-                var east = cell + Vector2Int.right;
-                var west = cell + Vector2Int.left;
-                if (IsMatchingDoor(east, doorDefName)) { partner = east; return true; }
-                if (IsMatchingDoor(west, doorDefName)) { partner = west; return true; }
-            }
-            else
-            {
-                var north = cell + Vector2Int.up;
-                var south = cell + Vector2Int.down;
-                if (IsMatchingDoor(north, doorDefName)) { partner = north; return true; }
-                if (IsMatchingDoor(south, doorDefName)) { partner = south; return true; }
+                if (pos.x < minX) minX = pos.x;
+                if (pos.y < minY) minY = pos.y;
+                if (pos.x > maxX) maxX = pos.x;
+                if (pos.y > maxY) maxY = pos.y;
             }
 
-            partner = default;
-            return false;
+            int width = maxX - minX + 1;
+            int height = maxY - minY + 1;
+            var origin = new Vector2Int(minX, minY);
+            var cells = new LevelCell[width * height];
+
+            foreach (var kvp in builder.Cells)
+            {
+                int lx = kvp.Key.x - minX;
+                int ly = kvp.Key.y - minY;
+                cells[ly * width + lx] = kvp.Value;
+            }
+
+            return new LevelGrid(cells, width, height, origin, builder.PlacedRooms);
         }
     }
 }

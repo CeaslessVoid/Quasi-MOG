@@ -13,14 +13,8 @@ namespace RoomGen.UI
 
         public void Populate(IReadOnlyList<PlaceableItem> items, System.Func<string, bool> isSelected = null)
         {
-            if (itemPrefab == null)
-            {
-                return;
-            }
-            if (content == null)
-            {
-                return;
-            }
+            if (itemPrefab == null) return;
+            if (content == null) return;
 
             EnsurePoolSize(items.Count);
 
@@ -47,11 +41,7 @@ namespace RoomGen.UI
             while (_pool.Count < count)
             {
                 guard++;
-                if (guard > 10000)
-                {
-                    Debug.LogError("DefListPanel: aborting pool growth, exceeded sanity limit. Check itemPrefab.", this);
-                    break;
-                }
+                if (guard > 10000) break;
 
                 var instance = Instantiate(itemPrefab, content);
                 var rt = instance.transform as RectTransform;

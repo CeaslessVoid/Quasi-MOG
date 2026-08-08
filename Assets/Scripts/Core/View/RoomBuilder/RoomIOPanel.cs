@@ -6,10 +6,8 @@ using TMPro;
 
 namespace RoomGen.UI
 {
-    public class RoomIOPanel : MonoBehaviour
+    public class RoomIOPanel : TopBarWindowPanel
     {
-        [SerializeField] private RoomBuilderController controller;
-
         [Header("Create")]
         [SerializeField] private TMP_InputField widthInput;
         [SerializeField] private TMP_InputField heightInput;
@@ -37,7 +35,7 @@ namespace RoomGen.UI
 
         private void Update()
         {
-            if (statusText != null) statusText.text = controller.StatusMessage;
+            if (statusText != null) statusText.text = Controller.StatusMessage;
         }
 
         private void HandleCreate()
@@ -46,20 +44,20 @@ namespace RoomGen.UI
             int h = ParseOrDefault(heightInput != null ? heightInput.text : "5", 5);
             string id = templateIdInput != null && !string.IsNullOrWhiteSpace(templateIdInput.text) ? templateIdInput.text : "NewRoom";
 
-            controller.CreateNewRoom(w, h, id);
+            Controller.CreateNewRoom(w, h, id);
             RefreshRoomList();
         }
 
         private void HandleSave()
         {
-            controller.SaveRoom(templateIdInput != null ? templateIdInput.text : null);
+            Controller.SaveRoom(templateIdInput != null ? templateIdInput.text : null);
             RefreshRoomList();
         }
 
         private void RefreshRoomList()
         {
-            controller.RefreshFileList();
-            var files = controller.RoomFiles
+            Controller.RefreshFileList();
+            var files = Controller.RoomFiles
                 .Where(f => string.IsNullOrEmpty(_searchText) ||
                             Path.GetFileNameWithoutExtension(f).IndexOf(_searchText, System.StringComparison.OrdinalIgnoreCase) >= 0)
                 .ToList();
@@ -70,8 +68,8 @@ namespace RoomGen.UI
 
         private void HandleLoad(string path)
         {
-            controller.LoadRoom(path);
-            var room = controller.CurrentRoom;
+            Controller.LoadRoom(path);
+            var room = Controller.CurrentRoom;
             if (room == null) return;
             if (templateIdInput != null) templateIdInput.text = room.templateId;
             if (widthInput != null) widthInput.text = room.width.ToString();

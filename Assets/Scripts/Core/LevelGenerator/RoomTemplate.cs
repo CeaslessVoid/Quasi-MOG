@@ -40,6 +40,17 @@ namespace RoomGen
             return _connectorRunsCache;
         }
 
+        public static RoomTemplate FromRoomData(RoomData source)
+        {
+            var t = CreateInstance<RoomTemplate>();
+            t.name = source.templateId;
+            t.data = source.Clone();
+            t.ceilingLayer = new CeilingCell[source.CellCount];
+            return t;
+        }
+
+        public RoomData ToRoomData() => data.Clone();
+
 #if UNITY_EDITOR
         [ContextMenu("Allocate / Resize Layers")]
         private void AllocateLayers()

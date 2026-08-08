@@ -32,8 +32,8 @@ namespace RoomGen
         private readonly Dictionary<FloorDef, Tile> _floorTileCache = new Dictionary<FloorDef, Tile>();
         private readonly Dictionary<(WallDef, int), Tile> _wallTileCache = new Dictionary<(WallDef, int), Tile>();
         private readonly Dictionary<LiquidDef, Tile> _liquidTileCache = new Dictionary<LiquidDef, Tile>();
-      
-        
+
+
         private Tile _missingLiquidTile;
         private Tile _missingFloorTile;
         private Tile _missingWallTile;
@@ -121,10 +121,10 @@ namespace RoomGen
 
             if (data.normal == NormalType.Wall)
             {
-                bool n = IsWallLike(grid, cell + Vector2Int.up);
-                bool e = IsWallLike(grid, cell + Vector2Int.right);
-                bool s = IsWallLike(grid, cell + Vector2Int.down);
-                bool w = IsWallLike(grid, cell + Vector2Int.left);
+                bool n = grid.IsWallBlocking(cell + Vector2Int.up);
+                bool e = grid.IsWallBlocking(cell + Vector2Int.right);
+                bool s = grid.IsWallBlocking(cell + Vector2Int.down);
+                bool w = grid.IsWallBlocking(cell + Vector2Int.left);
                 int bitmask = ComputeBitmask(n, e, s, w);
 
                 var wallDef = DefDatabase.Get<WallDef>(data.wallDef);
@@ -149,8 +149,6 @@ namespace RoomGen
             _liquidTileCache[def] = tile;
             return tile;
         }
-
-        private static bool IsWallLike(LevelGrid grid, Vector2Int cell) => grid.GetCell(cell).normal == NormalType.Wall;
 
         private void RefreshDoorCell(LevelGrid grid, Vector2Int cell)
         {
@@ -290,7 +288,7 @@ namespace RoomGen
             else
                 DefTintRenderer.ApplyFlatTint(sr, DefVisualUtility.MissingColor);
 
-            var fitSize = PropSpriteUtility.GetUniformFitSize(sprite, w * cellSize, h * cellSize);
+            var fitSize = PropPlacementUtility.GetUniformFitSize(sprite, w * cellSize, h * cellSize);
             spriteGO.transform.localScale = new Vector3((flip ? -1f : 1f) * fitSize.x, fitSize.y, 1f);
 
             go.AddComponent<PropInstance>().Configure(def);

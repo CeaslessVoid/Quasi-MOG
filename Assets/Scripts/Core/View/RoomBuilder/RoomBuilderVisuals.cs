@@ -270,12 +270,11 @@ namespace RoomGen
 
         public static bool IsNorthOrientedDoor(RoomData state, int x, int y)
         {
-            bool northSouthOpen = !IsWallLike(state, x, y + 1) && !IsWallLike(state, x, y - 1);
-            bool eastWestOpen = !IsWallLike(state, x + 1, y) && !IsWallLike(state, x - 1, y);
-
-            if (northSouthOpen && !eastWestOpen) return true;
-            if (eastWestOpen && !northSouthOpen) return false;
-            return true;
+            bool n = IsWallLike(state, x, y + 1);
+            bool e = IsWallLike(state, x + 1, y);
+            bool s = IsWallLike(state, x, y - 1);
+            bool w = IsWallLike(state, x - 1, y);
+            return WallAtlas.IsNorthOriented(n, e, s, w);
         }
 
         public void RefreshProp(PropPlacement p)
@@ -312,7 +311,7 @@ namespace RoomGen
             else
                 DefTintRenderer.ApplyFlatTint(pv.body, DefVisualUtility.MissingColor);
 
-            var fitSize = PropSpriteUtility.GetUniformFitSize(sprite, w * cellSize, h * cellSize);
+            var fitSize = PropPlacementUtility.GetUniformFitSize(sprite, w * cellSize, h * cellSize);
             pv.body.transform.localScale = new Vector3((flip ? -1f : 1f) * fitSize.x, fitSize.y, 1f);
         }
 
@@ -410,7 +409,7 @@ namespace RoomGen
                 float cy = (boundsMin.y + boundsMax.y) * 0.5f * cellSize;
                 _previewGhost.transform.localPosition = new Vector3(cx, cy, -0.25f);
 
-                var fitSize = PropSpriteUtility.GetUniformFitSize(ghostSprite, w * cellSize, h * cellSize);
+                var fitSize = PropPlacementUtility.GetUniformFitSize(ghostSprite, w * cellSize, h * cellSize);
                 _previewGhost.transform.localScale = new Vector3((flipGhostX ? -1f : 1f) * fitSize.x, fitSize.y, 1f);
             }
             else

@@ -4,10 +4,8 @@ using TMPro;
 
 namespace RoomGen.UI
 {
-    public class RoomWeightsPanel : MonoBehaviour
+    public class RoomWeightsPanel : TopBarWindowPanel
     {
-        [SerializeField] private RoomBuilderController controller;
-
         [SerializeField] private TMP_InputField desiredConnectionsInput;
         [SerializeField] private TMP_InputField chanceToConnectWhenBelowTargetInput;
         [SerializeField] private TMP_InputField selectionWeightInput;
@@ -23,26 +21,30 @@ namespace RoomGen.UI
 
         private void RefreshFields()
         {
-            desiredConnectionsInput.SetTextWithoutNotify(controller.CurrentDesiredConnections.ToString());
-            chanceToConnectWhenBelowTargetInput.SetTextWithoutNotify(controller.CurrentChanceToConnectWhenBelowTarget.ToString(CultureInfo.InvariantCulture));
-            selectionWeightInput.SetTextWithoutNotify(controller.CurrentSelectionWeight.ToString(CultureInfo.InvariantCulture));
+            if (!Controller) return;
+            Debug.Log(1);
+            desiredConnectionsInput.SetTextWithoutNotify(Controller.CurrentDesiredConnections.ToString());
+            Debug.Log(2);
+            chanceToConnectWhenBelowTargetInput.SetTextWithoutNotify(Controller.CurrentChanceToConnectWhenBelowTarget.ToString(CultureInfo.InvariantCulture));
+            Debug.Log(3);
+            selectionWeightInput.SetTextWithoutNotify(Controller.CurrentSelectionWeight.ToString(CultureInfo.InvariantCulture));
         }
 
         private void HandleDesiredConnections(string value)
         {
-            if (int.TryParse(value, out int result)) controller.SetDesiredConnections(result);
+            if (int.TryParse(value, out int result)) Controller.SetDesiredConnections(result);
             RefreshFields();
         }
 
         private void HandleChanceToConnectWhenBelowTarget(string value)
         {
-            if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float result)) controller.SetChanceToConnectWhenBelowTarget(result);
+            if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float result)) Controller.SetChanceToConnectWhenBelowTarget(result);
             RefreshFields();
         }
 
         private void HandleSelectionWeight(string value)
         {
-            if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float result)) controller.SetSelectionWeight(result);
+            if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float result)) Controller.SetSelectionWeight(result);
             RefreshFields();
         }
     }

@@ -26,5 +26,14 @@ namespace RoomGen
             if (array == null || array.Length == 0) return null;
             return array[BitmaskToIndex[Mathf.Clamp(bitmask, 0, 15)]];
         }
+
+        public static bool IsNorthOriented(bool north, bool east, bool south, bool west)
+        {
+            bool northSouthOpen = !north && !south;
+            bool eastWestOpen = !east && !west;
+            if (northSouthOpen && !eastWestOpen) return true;
+            if (eastWestOpen && !northSouthOpen) return false;
+            return true;
+        }
     }
 }

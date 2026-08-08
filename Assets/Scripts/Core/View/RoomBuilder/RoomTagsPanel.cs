@@ -5,10 +5,8 @@ using TMPro;
 
 namespace RoomGen.UI
 {
-    public class RoomTagsPanel : MonoBehaviour
+    public class RoomTagsPanel : TopBarWindowPanel
     {
-        [SerializeField] private RoomBuilderController controller;
-
         [Header("Type Tags")]
         [SerializeField] private TMP_InputField typeTagInput;
         [SerializeField] private Button typeTagAddButton;
@@ -30,7 +28,7 @@ namespace RoomGen.UI
         private void HandleAddTypeTag()
         {
             if (typeTagInput == null || string.IsNullOrWhiteSpace(typeTagInput.text)) return;
-            controller.AddTypeTag(typeTagInput.text.Trim());
+            Controller.AddTypeTag(typeTagInput.text.Trim());
             typeTagInput.text = "";
             RefreshLists();
         }
@@ -38,14 +36,16 @@ namespace RoomGen.UI
         private void HandleAddZoneTag()
         {
             if (zoneTagInput == null || string.IsNullOrWhiteSpace(zoneTagInput.text)) return;
-            controller.AddZoneTag(zoneTagInput.text.Trim());
+            Controller.AddZoneTag(zoneTagInput.text.Trim());
             zoneTagInput.text = "";
             RefreshLists();
         }
 
         private void RefreshLists()
         {
-            var room = controller.CurrentRoom;
+            if (Controller?.CurrentRoom == null) return;
+
+            var room = Controller.CurrentRoom;
             if (room == null)
             {
                 typeTagListView.Populate(System.Array.Empty<SimpleButtonItem>());
@@ -57,7 +57,7 @@ namespace RoomGen.UI
             foreach (var tag in room.typeTags)
             {
                 var captured = tag;
-                typeItems.Add(new SimpleButtonItem(captured, () => { controller.RemoveTypeTag(captured); RefreshLists(); }));
+                typeItems.Add(new SimpleButtonItem(captured, () => { Controller.RemoveTypeTag(captured); RefreshLists(); }));
             }
             typeTagListView.Populate(typeItems);
 
@@ -65,7 +65,7 @@ namespace RoomGen.UI
             foreach (var tag in room.zoneTags)
             {
                 var captured = tag;
-                zoneItems.Add(new SimpleButtonItem(captured, () => { controller.RemoveZoneTag(captured); RefreshLists(); }));
+                zoneItems.Add(new SimpleButtonItem(captured, () => { Controller.RemoveZoneTag(captured); RefreshLists(); }));
             }
             zoneTagListView.Populate(zoneItems);
         }

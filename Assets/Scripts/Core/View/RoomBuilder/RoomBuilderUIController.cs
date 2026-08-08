@@ -219,20 +219,20 @@ namespace RoomGen.UI
         {
             var result = new List<PlaceableItem>();
             result.AddRange(DefDatabase.All<FloorDef>().Where(Matches)
-                .Select(def => new PlaceableItem(def.DefName, def.DisplayName, def.Icon, () => controller.SetFloorDefBrush(def.DefName))));
+                .Select(def => new PlaceableItem(def.DefName, def.DisplayName, def.Icon, () => { controller.SetFloorDefBrush(def.DefName); RefreshList(); })));
             result.AddRange(DefDatabase.All<LiquidDef>().Where(Matches)
-                .Select(def => new PlaceableItem(def.DefName, def.DisplayName, def.Icon, () => controller.SetLiquidDefBrush(def.DefName))));
+                .Select(def => new PlaceableItem(def.DefName, def.DisplayName, def.Icon, () => { controller.SetLiquidDefBrush(def.DefName); RefreshList(); })));
             return result;
         }
 
         private List<PlaceableItem> BuildWallItems() =>
             DefDatabase.All<WallDef>().Where(Matches)
-                .Select(def => new PlaceableItem(def.DefName, def.DisplayName, def.Icon, () => controller.SetWallDefBrush(def.DefName)))
+                .Select(def => new PlaceableItem(def.DefName, def.DisplayName, def.Icon, () => { controller.SetWallDefBrush(def.DefName); RefreshList(); }))
                 .ToList();
 
         private List<PlaceableItem> BuildDoorItems() =>
             DefDatabase.All<DoorDef>().Where(Matches)
-                .Select(def => new PlaceableItem(def.DefName, def.DisplayName, def.Icon, () => controller.SetDoorDefBrush(def.DefName)))
+                .Select(def => new PlaceableItem(def.DefName, def.DisplayName, def.Icon, () => { controller.SetDoorDefBrush(def.DefName); RefreshList(); }))
                 .ToList();
 
         private List<PlaceableItem> BuildPropItems()
@@ -248,7 +248,7 @@ namespace RoomGen.UI
                 .Where(def => categoryFilter == PropUseCategory.None || (def.UseCategories & categoryFilter) != 0)
                 .Where(def => includeStorage || !def.CanHaveStorage)
                 .Where(def => includeWallProps || def.Category != PropCategory.Wall)
-                .Select(def => new PlaceableItem(def.DefName, def.DisplayName, def.Icon, () => controller.SetPropBrush(def.DefName)))
+                .Select(def => new PlaceableItem(def.DefName, def.DisplayName, def.Icon, () => { controller.SetPropBrush(def.DefName); RefreshList(); }))
                 .ToList();
         }
 
@@ -259,7 +259,7 @@ namespace RoomGen.UI
             foreach (var v in values)
             {
                 var captured = v;
-                result.Add(new PlaceableItem(v.ToString(), v.ToString(), null, () => controller.SetConnectorBrush(captured)));
+                result.Add(new PlaceableItem(v.ToString(), v.ToString(), null, () => { controller.SetConnectorBrush(captured); RefreshList(); }));
             }
             return result;
         }

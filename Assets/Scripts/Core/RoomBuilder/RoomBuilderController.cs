@@ -35,7 +35,7 @@ namespace RoomGen
         public float CurrentChanceToConnectWhenBelowTarget => _state != null ? _state.chanceToConnectWhenBelowTarget : 0f;
         public float CurrentSelectionWeight => _state != null ? _state.selectionWeight : 0f;
 
-        
+
         private readonly List<(Vector2Int cell, bool valid)> _singleCellScratch = new List<(Vector2Int, bool)>(1);
         private readonly List<(Vector2Int cell, bool valid)> _propPreviewScratch = new List<(Vector2Int, bool)>();
 
@@ -123,19 +123,19 @@ namespace RoomGen
         {
             if (_state == null) { _statusMessage = "Nothing to save."; return; }
             if (!string.IsNullOrWhiteSpace(templateIdOverride)) _state.templateId = templateIdOverride;
-            RoomLibraryIO.Save(_state);
+            RoomLibrary.Save(_state);
             RefreshFileList();
-            _statusMessage = $"Saved '{_state.templateId}' to {RoomLibraryIO.RoomsFolder}";
+            _statusMessage = $"Saved '{_state.templateId}' to {RoomLibrary.RoomsFolder}";
         }
 
         public void LoadRoom(string path)
         {
-            _state = RoomLibraryIO.Load(path);
+            _state = RoomLibrary.Load(path);
             visuals.Rebuild(_state);
             _statusMessage = $"Loaded '{_state.templateId}'.";
         }
 
-        public void RefreshFileList() => _roomFiles = RoomLibraryIO.ListRoomFiles();
+        public void RefreshFileList() => _roomFiles = RoomLibrary.ListRoomFiles();
         public void AddTypeTag(string tag)
         {
             if (_state == null || string.IsNullOrWhiteSpace(tag)) return;
@@ -275,9 +275,7 @@ namespace RoomGen
             }
             else
             {
-                bool northSouthOpen = !n && !s;
-                bool eastWestOpen = !e && !w;
-                bool isNorthOrientation = !(eastWestOpen && !northSouthOpen);
+                bool isNorthOrientation = WallAtlas.IsNorthOriented(n, e, s, w);
 
                 var def = DefDatabase.Get<DoorDef>(_doorDefBrush);
                 Sprite sprite = def != null ? (isNorthOrientation ? def.NorthSprite : def.EastSprite) : null;
