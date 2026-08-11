@@ -289,6 +289,8 @@ namespace RoomGen
         public Vector2Int Origin { get; }
         public IReadOnlyList<PlacedRoom> PlacedRooms { get; }
 
+        internal LevelCell[] RawCells => _cells;
+
         internal LevelGrid(LevelCell[] cells, int width, int height, Vector2Int origin, List<PlacedRoom> placedRooms)
         {
             _cells = cells;

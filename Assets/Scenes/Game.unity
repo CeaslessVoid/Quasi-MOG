@@ -389,6 +389,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RoomGen.LevelViewerBootstrap
   orthographicSize: 20
+  networkedLevelSyncPrefab: {fileID: 2630526981751303358, guid: e9577c50cefb85a4592f7a196fb7a5f9, type: 3}
 --- !u!4 &634982911
 Transform:
   m_ObjectHideFlags: 0

@@ -45,6 +45,14 @@ namespace RoomGen
             return _cache;
         }
 
+        public static RoomTemplate GetByTemplateId(string templateId)
+        {
+            if (string.IsNullOrEmpty(templateId)) return null;
+            foreach (var template in LoadAll())
+                if (template.data.templateId == templateId) return template;
+            return null;
+        }
+
         public static void InvalidateCache() => _cache = null;
 
         private static string SanitizeFileName(string name)
