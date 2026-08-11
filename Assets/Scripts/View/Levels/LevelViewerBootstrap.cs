@@ -51,8 +51,8 @@ namespace RoomGen
                 }
 
                 var sync = Instantiate(networkedLevelSyncPrefab);
-                sync.GetComponent<NetworkObject>().Spawn();
                 sync.OnLevelReady += HandleLevelReady;
+                sync.GetComponent<NetworkObject>().Spawn();
             }
             else
             {

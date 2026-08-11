@@ -17,7 +17,15 @@ namespace GameDefs
             get
             {
                 if (_material == null)
-                    _material = new Material(Shader.Find("Custom/MaskedTintSprite")) { name = "MaskedTintSprite (Shared)" };
+                {
+                    var shader = Shader.Find("Custom/MaskedTintSprite");
+                    if (shader == null)
+                    {
+                        Debug.LogError("DefTintRenderer: Custom/MaskedTintSprite shader not found (missing from Always Included Shaders?). Falling back to Sprites/Default; tint/mask will not render correctly.");
+                        shader = Shader.Find("Sprites/Default");
+                    }
+                    _material = new Material(shader) { name = "MaskedTintSprite (Shared)" };
+                }
                 return _material;
             }
         }

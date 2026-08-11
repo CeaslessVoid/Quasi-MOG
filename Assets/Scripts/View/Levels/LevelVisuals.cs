@@ -72,17 +72,26 @@ namespace RoomGen
 
             foreach (var room in grid.PlacedRooms)
             {
-                for (int y = 0; y < room.template.height; y++)
-                {
-                    for (int x = 0; x < room.template.width; x++)
-                    {
-                        var world = RoomTemplateUtility.LocalToWorld(x, y, room.template.width, room.template.height, room.rotationDeg, room.origin);
-                        RefreshCell(grid, world);
-                    }
-                }
+                if (room.template == null) continue;
 
-                foreach (var prop in room.props)
-                    SpawnProp(prop);
+                try
+                {
+                    for (int y = 0; y < room.template.height; y++)
+                    {
+                        for (int x = 0; x < room.template.width; x++)
+                        {
+                            var world = RoomTemplateUtility.LocalToWorld(x, y, room.template.width, room.template.height, room.rotationDeg, room.origin);
+                            RefreshCell(grid, world);
+                        }
+                    }
+
+                    foreach (var prop in room.props)
+                        SpawnProp(prop);
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"LevelVisuals: failed to build room {room.id} ({room.template.data.templateId}): {e}");
+                }
             }
         }
 
