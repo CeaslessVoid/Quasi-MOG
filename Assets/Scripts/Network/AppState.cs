@@ -6,6 +6,8 @@ namespace Networking.App
 
     public class AppState : MonoBehaviour
     {
+        private const string PlayerNamePrefKey = "RoomGen.LocalPlayerName";
+
         public static AppState Instance { get; private set; }
 
         public NetworkRole Role { get; private set; } = NetworkRole.Singleplayer;
@@ -23,6 +25,8 @@ namespace Networking.App
             }
             Instance = this;
             DontDestroyOnLoad(gameObject);
+
+            LocalPlayerName = PlayerPrefs.GetString(PlayerNamePrefKey, "Player");
         }
 
         public static AppState EnsureExists()
@@ -35,6 +39,8 @@ namespace Networking.App
         public void SetLocalPlayerName(string name)
         {
             LocalPlayerName = string.IsNullOrWhiteSpace(name) ? "Player" : name.Trim();
+            PlayerPrefs.SetString(PlayerNamePrefKey, LocalPlayerName);
+            PlayerPrefs.Save();
         }
 
         public void ConfigureSingleplayerNewGame(int slotIndex, string saveName)

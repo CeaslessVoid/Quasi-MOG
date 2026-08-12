@@ -1,11 +1,11 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using Networking;
 using Networking.App;
 using RoomGen;
 using Save;
-using System;
-using System.Collections.Generic;
 using TMPro;
-using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
@@ -23,6 +23,7 @@ namespace UI.MainMenu
         [SerializeField] private TMP_InputField usernameInput;
         [SerializeField] private TMP_InputField createRoomNameInput;
         [SerializeField] private Button createRoomButton;
+        [SerializeField] private Button refreshRoomsButton;
         [SerializeField] private Transform roomListContent;
         [SerializeField] private RoomListItemView roomListItemPrefab;
         [SerializeField] private LanRoomDiscovery discovery;
@@ -39,39 +40,26 @@ namespace UI.MainMenu
         [SerializeField] private TMP_Text waitingForHostText;
         [SerializeField] private Button leaveLobbyButton;
 
-        [Header("Host Save Selection")]
-        [SerializeField] private GameObject hostSaveSelectPanel;
-        [SerializeField] private SaveSlotView[] hostSaveSlotViews;
-        [SerializeField] private GameObject hostNewGameDialog;
-        [SerializeField] private TMP_InputField hostNewGameNameInput;
-        [SerializeField] private Button hostNewGameConfirmButton;
-        [SerializeField] private Button hostNewGameCancelButton;
-
-        [Header("Host Save Selection: Delete")]
-        [SerializeField] private GameObject hostDeleteConfirmDialog;
-        [SerializeField] private TMP_Text hostDeleteConfirmText;
-        [SerializeField] private Button hostDeleteConfirmButton;
-        [SerializeField] private Button hostDeleteCancelButton;
+        [Header("Shared Save Slot Select (Host)")]
+        [SerializeField] private SaveSlotSelectController saveSlotSelect;
 
         private readonly List<RoomListItemView> _roomRows = new List<RoomListItemView>();
         private readonly List<LobbyPlayerRowView> _playerRows = new List<LobbyPlayerRowView>();
-        private float _refreshTimer;
         private string _pendingRoomName;
-        private int _hostPendingSlotIndex = -1;
-        private int _hostPendingDeleteIndex = -1;
+
+        private Coroutine _waitForSessionRoutine;
+        private RoomSession _subscribedSession;
 
         private void Awake()
         {
             backButton.onClick.AddListener(HandleBack);
             createRoomButton.onClick.AddListener(HandleCreateRoom);
+            refreshRoomsButton.onClick.AddListener(RefreshRoomList);
             leaveLobbyButton.onClick.AddListener(HandleLeaveLobby);
             startGameButton.onClick.AddListener(HandleStartGame);
 
-            hostNewGameConfirmButton.onClick.AddListener(ConfirmHostNewGame);
-            hostNewGameCancelButton.onClick.AddListener(() => hostNewGameDialog.SetActive(false));
-
-            hostDeleteConfirmButton.onClick.AddListener(ConfirmHostDelete);
-            hostDeleteCancelButton.onClick.AddListener(() => hostDeleteConfirmDialog.SetActive(false));
+            if (usernameInput != null)
+                usernameInput.text = AppState.EnsureExists().LocalPlayerName;
         }
 
         private void OnEnable()
@@ -83,40 +71,32 @@ namespace UI.MainMenu
         private void OnDisable()
         {
             discovery.StopAll();
-        }
-
-        private void Update()
-        {
-            if (!browsePanel.activeSelf) return;
-            _refreshTimer -= Time.unscaledDeltaTime;
-            if (_refreshTimer > 0f) return;
-            _refreshTimer = 0.5f;
-            RefreshRoomList();
+            StopWaitingForSession();
         }
 
         private void ShowBrowse()
         {
             browsePanel.SetActive(true);
             lobbyPanel.SetActive(false);
-            hostSaveSelectPanel.SetActive(false);
+            saveSlotSelect.Close();
+            RefreshRoomList();
         }
 
         private void ShowLobby()
         {
             browsePanel.SetActive(false);
             lobbyPanel.SetActive(true);
-            hostSaveSelectPanel.SetActive(false);
+            saveSlotSelect.Close();
 
             var nm = NetworkManager.Singleton;
             bool isHost = nm != null && nm.IsHost;
             startGameButton.gameObject.SetActive(isHost);
             waitingForHostText.gameObject.SetActive(!isHost);
 
-            if (RoomSession.Instance != null)
-                RoomSession.Instance.OnPlayersChanged += RefreshLobbyPlayers;
-            RefreshLobbyPlayers();
+            ClearPlayerRows();
+            StopWaitingForSession();
+            _waitForSessionRoutine = StartCoroutine(WaitForRoomSessionThenSubscribe());
         }
-
         private void RefreshRoomList()
         {
             var rooms = discovery.DiscoveredRooms;
@@ -188,6 +168,41 @@ namespace UI.MainMenu
             lobbyRoomNameText.text = room.roomName;
             ShowLobby();
         }
+        private IEnumerator WaitForRoomSessionThenSubscribe()
+        {
+            const float timeout = 10f;
+            float elapsed = 0f;
+
+            while (RoomSession.Instance == null)
+            {
+                if (elapsed >= timeout)
+                {
+                    Debug.LogWarning("MultiplayerPanelController: timed out waiting for RoomSession to spawn.");
+                    yield break;
+                }
+                elapsed += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            _subscribedSession = RoomSession.Instance;
+            _subscribedSession.OnPlayersChanged += RefreshLobbyPlayers;
+            RefreshLobbyPlayers();
+        }
+
+        private void StopWaitingForSession()
+        {
+            if (_waitForSessionRoutine != null)
+            {
+                StopCoroutine(_waitForSessionRoutine);
+                _waitForSessionRoutine = null;
+            }
+
+            if (_subscribedSession != null)
+            {
+                _subscribedSession.OnPlayersChanged -= RefreshLobbyPlayers;
+                _subscribedSession = null;
+            }
+        }
 
         private void RefreshLobbyPlayers()
         {
@@ -210,72 +225,28 @@ namespace UI.MainMenu
             }
         }
 
+        private void ClearPlayerRows()
+        {
+            foreach (var row in _playerRows) row.gameObject.SetActive(false);
+        }
         private void HandleStartGame()
         {
             var nm = NetworkManager.Singleton;
             if (RoomSession.Instance == null || nm == null || !nm.IsHost) return;
 
             lobbyPanel.SetActive(false);
-            hostSaveSelectPanel.SetActive(true);
-            RefreshHostSaveSlots();
+            saveSlotSelect.Open(HandleHostLoadSlot, HandleHostNewGame);
         }
 
-        private void RefreshHostSaveSlots()
+        private void HandleHostLoadSlot(int slotIndex)
         {
-            var slots = SaveManager.GetSlots();
-            for (int i = 0; i < hostSaveSlotViews.Length && i < slots.Length; i++)
-            {
-                int index = i;
-                hostSaveSlotViews[i].Bind(index, () => HandleHostSlotClicked(index), () => HandleHostDeleteRequested(index));
-                hostSaveSlotViews[i].SetInfo(slots[i]);
-            }
+            var info = SaveManager.GetSlots()[slotIndex];
+            LaunchWithSlot(slotIndex, info.saveName, isNewGame: false);
         }
 
-        private void HandleHostSlotClicked(int index)
+        private void HandleHostNewGame(int slotIndex, string saveName)
         {
-            var info = SaveManager.GetSlots()[index];
-            if (info.hasSave)
-            {
-                LaunchWithSlot(index, info.saveName, isNewGame: false);
-            }
-            else
-            {
-                _hostPendingSlotIndex = index;
-                if (hostNewGameNameInput != null) hostNewGameNameInput.text = $"Save {index + 1}";
-                hostNewGameDialog.SetActive(true);
-            }
-        }
-
-        private void ConfirmHostNewGame()
-        {
-            if (_hostPendingSlotIndex < 0) return;
-            string name = hostNewGameNameInput != null ? hostNewGameNameInput.text : null;
-            SaveManager.CreateNewGame(_hostPendingSlotIndex, name);
-            hostNewGameDialog.SetActive(false);
-            LaunchWithSlot(_hostPendingSlotIndex, name, isNewGame: true);
-        }
-
-        private void HandleHostDeleteRequested(int index)
-        {
-            var info = SaveManager.GetSlots()[index];
-            if (!info.hasSave) return;
-
-            _hostPendingDeleteIndex = index;
-            if (hostDeleteConfirmText != null)
-            {
-                string label = string.IsNullOrEmpty(info.saveName) ? $"Save {index + 1}" : info.saveName;
-                hostDeleteConfirmText.text = $"Delete '{label}'? This cannot be undone.";
-            }
-            hostDeleteConfirmDialog.SetActive(true);
-        }
-
-        private void ConfirmHostDelete()
-        {
-            if (_hostPendingDeleteIndex < 0) return;
-            SaveManager.DeleteSlot(_hostPendingDeleteIndex);
-            _hostPendingDeleteIndex = -1;
-            hostDeleteConfirmDialog.SetActive(false);
-            RefreshHostSaveSlots();
+            LaunchWithSlot(slotIndex, saveName, isNewGame: true);
         }
 
         private void LaunchWithSlot(int index, string saveName, bool isNewGame)
@@ -283,14 +254,13 @@ namespace UI.MainMenu
             var app = AppState.EnsureExists();
             app.ConfigureMultiplayerHost(index, saveName, isNewGame);
             discovery.StopAdvertising();
+            saveSlotSelect.Close();
             RoomSession.Instance.ServerLoadGameScene();
         }
 
         private void HandleLeaveLobby()
         {
-            if (RoomSession.Instance != null)
-                RoomSession.Instance.OnPlayersChanged -= RefreshLobbyPlayers;
-
+            StopWaitingForSession();
             discovery.StopAll();
             NetworkGameLauncher.Shutdown();
             ShowBrowse();

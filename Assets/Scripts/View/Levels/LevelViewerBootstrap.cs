@@ -8,7 +8,6 @@ namespace RoomGen
     public class LevelViewerBootstrap : MonoBehaviour
     {
         [SerializeField] private float orthographicSize = 20f;
-        [Tooltip("NetworkObject prefab holding NetworkedLevelSync. Must be registered in the NetworkManager's Network Prefabs list. Only required for multiplayer.")]
         [SerializeField] private NetworkedLevelSync networkedLevelSyncPrefab;
 
         private LevelVisuals _visuals;
