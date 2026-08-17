@@ -9,14 +9,17 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cf14a4ca8a995414e92553568f786e60, type: 3}
-  m_Name: DefDatabase
-  m_EditorClassIdentifier: Assembly-CSharp::GameDefs.DefDatabase
-  defs:
-  - {fileID: 11400000, guid: 7a0defee33f4bc543a89441789849fd8, type: 2}
-  - {fileID: 11400000, guid: bf0fbaca418c7b844b1db03d73a80085, type: 2}
-  - {fileID: 11400000, guid: bd7ff8e6aaae2b2419bcd0f8ccb5356b, type: 2}
-  - {fileID: 11400000, guid: 68f1118702ac28e4d8c8254357b2b174, type: 2}
+  m_Script: {fileID: 11500000, guid: 882d17fb5c01811478a1f4697681ae6e, type: 3}
+  m_Name: Human
+  m_EditorClassIdentifier: Assembly-CSharp::GameDefs.EntityDef
+  defName: Human
+  displayName: human
+  icon: {fileID: -1829291111195205181, guid: 2e96a8767b9c24e4eb15d23caf95d6a4, type: 3}
+  tintColor: {r: 1, g: 1, b: 1, a: 1}
+  secondaryTintColor: {r: 1, g: 1, b: 1, a: 1}
+  maskTexture: {fileID: 0}
+  maxHealth: 25
+  limbs:
   - {fileID: 11400000, guid: ce1e148ae7463ef449bea5db55452db7, type: 2}
   - {fileID: 11400000, guid: 32c3556f418b94044b71ff42facb1059, type: 2}
   - {fileID: 11400000, guid: ccdf377179479854a941345302dc6902, type: 2}
@@ -26,5 +29,4 @@ MonoBehaviour:
   - {fileID: 11400000, guid: acb09558a603c1d42be7e351e0d4701d, type: 2}
   - {fileID: 11400000, guid: cc0bb9d5ff27bdf41b5a1c8e6c4f62e9, type: 2}
   - {fileID: 11400000, guid: 2fa2e405a5cab24419e926aa36df76d9, type: 2}
-  - {fileID: 11400000, guid: f389d190d4b69c042948c6815b393792, type: 2}
-  - {fileID: 11400000, guid: 58b3e99c85b72a5489d617109092ff0c, type: 2}
+  worldSprite: {fileID: -1829291111195205181, guid: 2e96a8767b9c24e4eb15d23caf95d6a4, type: 3}

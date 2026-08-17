@@ -2,6 +2,7 @@ using UnityEngine;
 using Unity.Netcode;
 using Networking.App;
 using Networking;
+using Entities;
 
 namespace RoomGen
 {
@@ -9,6 +10,7 @@ namespace RoomGen
     {
         [SerializeField] private float orthographicSize = 20f;
         [SerializeField] private NetworkedLevelSync networkedLevelSyncPrefab;
+        [SerializeField] private string playerEntityDefName = "Human";
 
         private LevelVisuals _visuals;
 
@@ -32,6 +34,10 @@ namespace RoomGen
             var generator = levelGO.AddComponent<RoomGenerator>();
             generator.Generate();
             _visuals.Rebuild(generator.Grid);
+
+            var entities = EntitySpawner.SpawnPlayers(generator.Grid, playerEntityDefName, 1, _visuals.CellSize);
+            if (entities.Count > 0)
+                SimpleTopDownCameraController.Instance?.CenterOn(entities[0].transform.position);
         }
 
         private void StartMultiplayer()

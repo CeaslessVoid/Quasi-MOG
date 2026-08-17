@@ -5,13 +5,14 @@ namespace RoomGen
 {
     public class SimpleTopDownCameraController : MonoBehaviour
     {
+        public static SimpleTopDownCameraController Instance { get; private set; }
+
         [SerializeField] private Camera targetCamera;
         [SerializeField] private float panSpeed = 10f;
         [SerializeField] private float zoomSpeed = 5f;
         [SerializeField] private float minZoom = 2f;
         [SerializeField] private float maxZoom = 60f;
 
-        [Tooltip("Screen-space pixels reserved on the left for an IMGUI tool panel, if any - scrolling over that region zooms the panel's own scroll view instead of the world. Leave at 0 if there's no panel.")]
         [SerializeField] private float reservedPanelWidth = 0f;
 
         public void Configure(Camera cam, float reservedPanelWidthOverride = -1f)
@@ -20,9 +21,22 @@ namespace RoomGen
             if (reservedPanelWidthOverride >= 0f) reservedPanelWidth = reservedPanelWidthOverride;
         }
 
+        public void CenterOn(Vector3 worldPosition)
+        {
+            if (targetCamera == null) return;
+            var pos = targetCamera.transform.position;
+            targetCamera.transform.position = new Vector3(worldPosition.x, worldPosition.y, pos.z);
+        }
+
         private void Awake()
         {
+            Instance = this;
             if (targetCamera == null) targetCamera = Camera.main;
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
         }
 
         private void Update()

@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 using RoomGen;
+using Entities;
+using Networking.App;
 
 namespace Networking
 {
@@ -10,6 +13,9 @@ namespace Networking
         public static NetworkedLevelSync Instance { get; private set; }
 
         private const int ChunkSize = 500;
+
+        [SerializeField] private NetworkObject playableEntityPrefab;
+        [SerializeField] private string playerEntityDefName = "Human";
 
         public event Action<LevelGrid> OnLevelReady;
 
@@ -20,6 +26,8 @@ namespace Networking
         private int _receiveOffset;
         private int _receiveTotalChunks;
         private int _receiveChunkCount;
+
+        private readonly HashSet<Vector2Int> _usedSpawnCells = new HashSet<Vector2Int>();
 
         private void Awake() => Instance = this;
 
@@ -33,14 +41,16 @@ namespace Networking
                 OnLevelReady?.Invoke(_grid);
 
                 SendLevelToAllClients();
-                NetworkManager.OnClientConnectedCallback += HandleLateJoin;
+                SpawnEntitiesForConnectedClients();
+
+                NetworkManager.OnClientConnectedCallback += HandleClientConnected;
             }
         }
 
         public override void OnNetworkDespawn()
         {
             if (IsServer && NetworkManager != null)
-                NetworkManager.OnClientConnectedCallback -= HandleLateJoin;
+                NetworkManager.OnClientConnectedCallback -= HandleClientConnected;
             if (Instance == this) Instance = null;
         }
 
@@ -53,16 +63,10 @@ namespace Networking
             return go.AddComponent<RoomGenerator>();
         }
 
-        private void SendLevelToAllClients()
+        private void HandleClientConnected(ulong clientId)
         {
-            byte[] payload = LevelNetworkSerializer.Serialize(_grid);
-            SendChunks(payload, null);
-        }
-
-        private void HandleLateJoin(ulong clientId)
-        {
-            if (_grid == null) return;
             if (clientId == NetworkManager.LocalClientId) return;
+            if (_grid == null) return;
 
             byte[] payload = LevelNetworkSerializer.Serialize(_grid);
             var sendParams = new ClientRpcParams
@@ -70,6 +74,14 @@ namespace Networking
                 Send = new ClientRpcSendParams { TargetClientIds = new[] { clientId } }
             };
             SendChunks(payload, sendParams);
+
+            SpawnEntityForClient(clientId);
+        }
+
+        private void SendLevelToAllClients()
+        {
+            byte[] payload = LevelNetworkSerializer.Serialize(_grid);
+            SendChunks(payload, null);
         }
 
         private void SendChunks(byte[] payload, ClientRpcParams? targetParams)
@@ -112,6 +124,45 @@ namespace Networking
             _grid = LevelNetworkSerializer.Deserialize(_receiveBuffer);
             _receiveBuffer = null;
             OnLevelReady?.Invoke(_grid);
+        }
+
+        private void SpawnEntitiesForConnectedClients()
+        {
+            foreach (var clientId in NetworkManager.ConnectedClientsIds)
+                SpawnEntityForClient(clientId);
+        }
+
+        private void SpawnEntityForClient(ulong clientId)
+        {
+            if (playableEntityPrefab == null)
+            {
+                Debug.LogError("NetworkedLevelSync: playableEntityPrefab is not assigned. Cannot spawn player entity.");
+                return;
+            }
+            if (_grid == null) return;
+
+            var candidates = EntitySpawner.FindSpawnableCells(_grid);
+            var cell = EntitySpawner.PickUnusedCell(candidates, _usedSpawnCells, _grid.Origin);
+
+            var instance = Instantiate(playableEntityPrefab);
+            instance.SpawnWithOwnership(clientId);
+
+            var link = instance.GetComponent<NetworkEntityLink>();
+            link.ServerInitialize(playerEntityDefName, ResolveCharacterName(clientId), clientId, cell);
+        }
+
+        private string ResolveCharacterName(ulong clientId)
+        {
+            if (RoomSession.Instance != null)
+            {
+                for (int i = 0; i < RoomSession.Instance.PlayerCount; i++)
+                {
+                    var p = RoomSession.Instance.GetPlayer(i);
+                    if (p.clientId == clientId) return p.playerName.ToString();
+                }
+            }
+
+            return clientId == NetworkManager.LocalClientId ? AppState.EnsureExists().LocalPlayerName : "Player";
         }
     }
 }
