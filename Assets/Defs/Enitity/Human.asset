@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 882d17fb5c01811478a1f4697681ae6e, type: 3}
   m_Name: Human
   m_EditorClassIdentifier: Assembly-CSharp::GameDefs.EntityDef
-  defName: Human
-  displayName: human
+  defName: human
+  displayName: Human
   icon: {fileID: -1829291111195205181, guid: 2e96a8767b9c24e4eb15d23caf95d6a4, type: 3}
   tintColor: {r: 1, g: 1, b: 1, a: 1}
   secondaryTintColor: {r: 1, g: 1, b: 1, a: 1}

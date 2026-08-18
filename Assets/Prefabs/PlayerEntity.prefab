@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &2854394660880589857
+--- !u!1 &1321355701782534167
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,23 +8,25 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 7649785243773076793}
-  - component: {fileID: 6774984217147219341}
-  - component: {fileID: 2630526981751303358}
+  - component: {fileID: 1306166680834441156}
+  - component: {fileID: 2725081444934149231}
+  - component: {fileID: 4900660130239843191}
+  - component: {fileID: 6763089775404824601}
+  - component: {fileID: 3378916137709204171}
   m_Layer: 0
-  m_Name: NetworkedLevelSync
+  m_Name: PlayerEntity
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &7649785243773076793
+--- !u!4 &1306166680834441156
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2854394660880589857}
+  m_GameObject: {fileID: 1321355701782534167}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -33,19 +35,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &6774984217147219341
+--- !u!114 &2725081444934149231
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2854394660880589857}
+  m_GameObject: {fileID: 1321355701782534167}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 396523472
+  GlobalObjectIdHash: 1417365947
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -59,18 +61,45 @@ MonoBehaviour:
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
---- !u!114 &2630526981751303358
+--- !u!114 &4900660130239843191
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2854394660880589857}
+  m_GameObject: {fileID: 1321355701782534167}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bc96f5e76b0f1604f93db326067bcb19, type: 3}
+  m_Script: {fileID: 11500000, guid: 3720c8e189292f644962f089281a89f6, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Networking.NetworkedLevelSync
+  m_EditorClassIdentifier: Assembly-CSharp::Entities.EntityVisuals
+  spriteSize: 1
+  nameLabelOffset: 0.65
+  nameFontSize: 2.5
+--- !u!114 &6763089775404824601
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1321355701782534167}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d3978a04da6fa247b17edd8aa968e81, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Entities.PlayableEntity
+  visuals: {fileID: 0}
+  characterName: 
+--- !u!114 &3378916137709204171
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1321355701782534167}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 434dec275e171e344beae8a103f412ec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Entities.NetworkEntityLink
   ShowTopMostFoldoutHeaderGroup: 1
-  playableEntityPrefab: {fileID: 2725081444934149231, guid: d8cecd0a61e527a4e8f18fff102b4748, type: 3}
-  playerEntityDefName: human
