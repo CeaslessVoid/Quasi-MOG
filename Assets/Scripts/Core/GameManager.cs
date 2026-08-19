@@ -1,11 +1,21 @@
-using GameDefs;
 using UnityEngine;
+
+public enum NetworkRole { Singleplayer, Host, Client }
 
 public class GameManager : MonoBehaviour
 {
+    private const string PlayerNamePrefKey = "RoomGen.LocalPlayerName";
+
     public static GameManager Instance { get; private set; }
 
-    public DefDatabase Defs;
+    public NetworkRole Role { get; private set; } = NetworkRole.Singleplayer;
+    public int SelectedSaveSlot { get; private set; } = -1;
+    public string PendingSaveName { get; private set; }
+    public bool IsNewGame { get; private set; }
+    public string LocalPlayerName { get; private set; } = "Player";
+
+    public bool IsMultiplayer => Role == NetworkRole.Host || Role == NetworkRole.Client;
+    public bool IsServerAuthority => Role == NetworkRole.Singleplayer || Role == NetworkRole.Host;
 
     private void Awake()
     {
@@ -18,6 +28,51 @@ public class GameManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        Defs.EnsureInitialized();
+        LocalPlayerName = PlayerPrefs.GetString(PlayerNamePrefKey, "Player");
+        GameDefs.DefDatabase.WarmUp();
+    }
+
+    public static GameManager EnsureExists()
+    {
+        if (Instance != null) return Instance;
+        var go = new GameObject("GameManager");
+        return go.AddComponent<GameManager>();
+    }
+
+    public void SetLocalPlayerName(string name)
+    {
+        LocalPlayerName = string.IsNullOrWhiteSpace(name) ? "Player" : name.Trim();
+        PlayerPrefs.SetString(PlayerNamePrefKey, LocalPlayerName);
+        PlayerPrefs.Save();
+    }
+
+    public void ConfigureSingleplayerNewGame(int slotIndex, string saveName)
+    {
+        Role = NetworkRole.Singleplayer;
+        SelectedSaveSlot = slotIndex;
+        PendingSaveName = saveName;
+        IsNewGame = true;
+    }
+
+    public void ConfigureSingleplayerLoad(int slotIndex)
+    {
+        Role = NetworkRole.Singleplayer;
+        SelectedSaveSlot = slotIndex;
+        IsNewGame = false;
+    }
+
+    public void ConfigureMultiplayerHost(int slotIndex, string saveName, bool isNewGame)
+    {
+        Role = NetworkRole.Host;
+        SelectedSaveSlot = slotIndex;
+        PendingSaveName = saveName;
+        IsNewGame = isNewGame;
+    }
+
+    public void ConfigureMultiplayerClient()
+    {
+        Role = NetworkRole.Client;
+        SelectedSaveSlot = -1;
+        IsNewGame = false;
     }
 }

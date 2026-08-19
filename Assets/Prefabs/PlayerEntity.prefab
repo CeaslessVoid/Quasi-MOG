@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 2725081444934149231}
   - component: {fileID: 4900660130239843191}
   - component: {fileID: 6763089775404824601}
-  - component: {fileID: 3378916137709204171}
+  - component: {fileID: 2903136076671084468}
   m_Layer: 0
   m_Name: PlayerEntity
   m_TagString: Untagged
@@ -47,7 +47,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 1417365947
+  GlobalObjectIdHash: 1154584959
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -88,9 +88,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1d3978a04da6fa247b17edd8aa968e81, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Entities.PlayableEntity
-  visuals: {fileID: 0}
+  visuals: {fileID: 4900660130239843191}
   characterName: 
---- !u!114 &3378916137709204171
+--- !u!114 &2903136076671084468
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -99,7 +99,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1321355701782534167}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 434dec275e171e344beae8a103f412ec, type: 3}
+  m_Script: {fileID: 11500000, guid: 5d1daf985ad4ca043b6b4e131d50e1e0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Entities.NetworkEntityLink
   ShowTopMostFoldoutHeaderGroup: 1

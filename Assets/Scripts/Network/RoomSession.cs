@@ -53,7 +53,7 @@ namespace Networking
                     _players.Add(new PlayerInfo { clientId = NetworkManager.LocalClientId, playerName = "Host" });
             }
 
-            SubmitNameRpc(App.AppState.EnsureExists().LocalPlayerName);
+            SubmitNameRpc(GameManager.EnsureExists().LocalPlayerName);
         }
 
         public override void OnNetworkDespawn()

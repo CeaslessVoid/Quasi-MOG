@@ -6,19 +6,36 @@ using UnityEngine;
 
 namespace Entities
 {
+    public struct EntitySpawnState : INetworkSerializable, System.IEquatable<EntitySpawnState>
+    {
+        public FixedString32Bytes entityDefName;
+        public FixedString32Bytes characterName;
+        public ulong ownerClientId;
+        public int cellX;
+        public int cellY;
+
+        public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
+        {
+            serializer.SerializeValue(ref entityDefName);
+            serializer.SerializeValue(ref characterName);
+            serializer.SerializeValue(ref ownerClientId);
+            serializer.SerializeValue(ref cellX);
+            serializer.SerializeValue(ref cellY);
+        }
+
+        public bool Equals(EntitySpawnState other) =>
+            entityDefName.Equals(other.entityDefName) &&
+            characterName.Equals(other.characterName) &&
+            ownerClientId == other.ownerClientId &&
+            cellX == other.cellX &&
+            cellY == other.cellY;
+    }
+
     [RequireComponent(typeof(PlayableEntity))]
     public class NetworkEntityLink : NetworkBehaviour
     {
-        private readonly NetworkVariable<FixedString32Bytes> _entityDefName =
-            new NetworkVariable<FixedString32Bytes>(writePerm: NetworkVariableWritePermission.Server);
-        private readonly NetworkVariable<FixedString32Bytes> _characterName =
-            new NetworkVariable<FixedString32Bytes>(writePerm: NetworkVariableWritePermission.Server);
-        private readonly NetworkVariable<ulong> _ownerClientId =
-            new NetworkVariable<ulong>(writePerm: NetworkVariableWritePermission.Server);
-        private readonly NetworkVariable<int> _cellX =
-            new NetworkVariable<int>(writePerm: NetworkVariableWritePermission.Server);
-        private readonly NetworkVariable<int> _cellY =
-            new NetworkVariable<int>(writePerm: NetworkVariableWritePermission.Server);
+        private readonly NetworkVariable<EntitySpawnState> _state =
+            new NetworkVariable<EntitySpawnState>(writePerm: NetworkVariableWritePermission.Server);
 
         private PlayableEntity _entity;
 
@@ -29,34 +46,34 @@ namespace Entities
 
         public void ServerInitialize(string entityDefName, string characterName, ulong ownerClientId, Vector2Int cell)
         {
-            _entityDefName.Value = entityDefName;
-            _characterName.Value = characterName;
-            _ownerClientId.Value = ownerClientId;
-            _cellX.Value = cell.x;
-            _cellY.Value = cell.y;
+            _state.Value = new EntitySpawnState
+            {
+                entityDefName = entityDefName,
+                characterName = characterName,
+                ownerClientId = ownerClientId,
+                cellX = cell.x,
+                cellY = cell.y
+            };
         }
 
         public override void OnNetworkSpawn()
         {
-            _entityDefName.OnValueChanged += (oldValue, newValue) => Apply();
-            _characterName.OnValueChanged += (oldValue, newValue) => Apply();
-            _cellX.OnValueChanged += (oldValue, newValue) => Apply();
-            _cellY.OnValueChanged += (oldValue, newValue) => Apply();
-
+            _state.OnValueChanged += (oldValue, newValue) => Apply();
             Apply();
         }
 
         private void Apply()
         {
-            if (_entityDefName.Value.IsEmpty) return;
+            var value = _state.Value;
+            if (value.entityDefName.IsEmpty) return;
 
-            var def = DefDatabase.Get<EntityDef>(_entityDefName.Value.ToString());
-            var cell = new Vector2Int(_cellX.Value, _cellY.Value);
+            var def = DefDatabase.Get<EntityDef>(value.entityDefName.ToString());
+            var cell = new Vector2Int(value.cellX, value.cellY);
 
             _entity.Configure(def, cell, EntityConstants.CellSize);
-            _entity.CharacterName = _characterName.Value.ToString();
+            _entity.CharacterName = value.characterName.ToString();
 
-            bool isLocalPlayer = NetworkManager.Singleton != null && _ownerClientId.Value == NetworkManager.Singleton.LocalClientId;
+            bool isLocalPlayer = NetworkManager.Singleton != null && value.ownerClientId == NetworkManager.Singleton.LocalClientId;
             _entity.RefreshVisuals(isLocalPlayer);
 
             if (isLocalPlayer)

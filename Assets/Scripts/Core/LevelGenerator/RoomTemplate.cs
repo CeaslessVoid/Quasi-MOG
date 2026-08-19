@@ -27,6 +27,8 @@ namespace RoomGen
         public string GetDoorDef(int x, int y) => data.GetDoorDef(x, y);
         public string GetFloorDef(int x, int y) => data.GetFloorDef(x, y);
 
+        public void InvalidateConnectorRunsCache() => _connectorRunsCache = null;
+
         public int desiredConnections => data.desiredConnections;
         public float chanceToConnectWhenBelowTarget => data.chanceToConnectWhenBelowTarget;
         public float selectionWeight => data.selectionWeight;

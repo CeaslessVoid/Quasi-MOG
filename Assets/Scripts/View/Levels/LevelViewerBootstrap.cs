@@ -1,6 +1,5 @@
 using UnityEngine;
 using Unity.Netcode;
-using Networking.App;
 using Networking;
 using Entities;
 
@@ -16,9 +15,9 @@ namespace RoomGen
 
         private void Start()
         {
-            var appState = AppState.EnsureExists();
+            var appState = GameManager.EnsureExists();
 
-            if (appState.IsMultiplayer && NetworkManager.Singleton != null)
+            if (GameManager.Instance.IsMultiplayer && NetworkManager.Singleton != null)
                 StartMultiplayer();
             else
                 StartSingleplayer();

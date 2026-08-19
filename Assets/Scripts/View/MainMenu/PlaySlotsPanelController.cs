@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using Networking.App;
 using Save;
 
 namespace UI.MainMenu
@@ -34,7 +33,7 @@ namespace UI.MainMenu
 
         private void HandleNewGame(int slotIndex, string saveName)
         {
-            var app = AppState.EnsureExists();
+            var app = GameManager.EnsureExists();
             app.ConfigureSingleplayerNewGame(slotIndex, saveName);
             SceneManager.LoadScene(gameSceneName);
         }
@@ -42,7 +41,7 @@ namespace UI.MainMenu
         private void LoadSlot(int slotIndex)
         {
             SaveManager.TouchSlot(slotIndex);
-            var app = AppState.EnsureExists();
+            var app = GameManager.EnsureExists();
             app.ConfigureSingleplayerLoad(slotIndex);
             SceneManager.LoadScene(gameSceneName);
         }

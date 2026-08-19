@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Networking;
-using Networking.App;
 using RoomGen;
 using Save;
 using TMPro;
@@ -59,7 +58,7 @@ namespace UI.MainMenu
             startGameButton.onClick.AddListener(HandleStartGame);
 
             if (usernameInput != null)
-                usernameInput.text = AppState.EnsureExists().LocalPlayerName;
+                usernameInput.text = GameManager.EnsureExists().LocalPlayerName;
         }
 
         private void OnEnable()
@@ -120,7 +119,7 @@ namespace UI.MainMenu
 
         private void HandleCreateRoom()
         {
-            var app = AppState.EnsureExists();
+            var app = GameManager.EnsureExists();
             app.SetLocalPlayerName(usernameInput != null ? usernameInput.text : "Player");
 
             _pendingRoomName = createRoomNameInput != null && !string.IsNullOrWhiteSpace(createRoomNameInput.text)
@@ -155,7 +154,7 @@ namespace UI.MainMenu
 
         private void HandleJoinRoom(RoomInfo room)
         {
-            var app = AppState.EnsureExists();
+            var app = GameManager.EnsureExists();
             app.SetLocalPlayerName(usernameInput != null ? usernameInput.text : "Player");
             app.ConfigureMultiplayerClient();
 
@@ -251,7 +250,7 @@ namespace UI.MainMenu
 
         private void LaunchWithSlot(int index, string saveName, bool isNewGame)
         {
-            var app = AppState.EnsureExists();
+            var app = GameManager.EnsureExists();
             app.ConfigureMultiplayerHost(index, saveName, isNewGame);
             discovery.StopAdvertising();
             saveSlotSelect.Close();

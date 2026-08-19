@@ -11,11 +11,38 @@ namespace GameDefs
     [CreateAssetMenu(fileName = "NewDefDatabase", menuName = "Defs/Def Database")]
     public class DefDatabase : ScriptableObject
     {
+        private const string ResourcePath = "DefDatabase";
+
         [SerializeField] private List<Def> defs = new List<Def>();
 
         private static DefDatabase _instance;
         private readonly Dictionary<Type, Dictionary<string, Def>> _lookup = new Dictionary<Type, Dictionary<string, Def>>();
         private readonly Dictionary<Type, object> _allCacheTyped = new Dictionary<Type, object>();
+
+        private static DefDatabase Instance
+        {
+            get
+            {
+                if (_instance == null) LoadAndInitialize();
+                return _instance;
+            }
+        }
+
+        public static void WarmUp()
+        {
+            if (_instance == null) LoadAndInitialize();
+        }
+
+        private static void LoadAndInitialize()
+        {
+            var loaded = Resources.Load<DefDatabase>(ResourcePath);
+            if (loaded == null)
+            {
+                Debug.LogError($"DefDatabase: no asset found at Resources/{ResourcePath}. Defs will not resolve.");
+                return;
+            }
+            loaded.EnsureInitialized();
+        }
 
         public void EnsureInitialized()
         {
@@ -38,10 +65,21 @@ namespace GameDefs
 
         public static T Get<T>(string defName) where T : Def
         {
-            if (_instance == null) return null;
-            if (string.IsNullOrEmpty(defName)) return null;
-            if (_instance._lookup.TryGetValue(typeof(T), out var dict) && dict.TryGetValue(defName, out var def))
-                return (T)def;
+            var db = Instance;
+            if (db == null || string.IsNullOrEmpty(defName)) return null;
+            return db.GetInternal<T>(defName);
+        }
+
+        private T GetInternal<T>(string defName) where T : Def
+        {
+            if (_lookup.TryGetValue(typeof(T), out var exact) && exact.TryGetValue(defName, out var exactDef))
+                return (T)exactDef;
+
+            foreach (var kvp in _lookup)
+            {
+                if (!typeof(T).IsAssignableFrom(kvp.Key)) continue;
+                if (kvp.Value.TryGetValue(defName, out var def)) return (T)def;
+            }
             return null;
         }
 
@@ -53,7 +91,8 @@ namespace GameDefs
 
         public static IReadOnlyList<T> All<T>() where T : Def
         {
-            return _instance == null ? Array.Empty<T>() : _instance.GetAllCached<T>();
+            var db = Instance;
+            return db == null ? Array.Empty<T>() : db.GetAllCached<T>();
         }
 
         private List<T> GetAllCached<T>() where T : Def

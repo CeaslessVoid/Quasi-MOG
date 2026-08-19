@@ -1,5 +1,4 @@
 using UnityEngine;
-using Networking.App;
 
 namespace UI.MainMenu
 {
@@ -12,7 +11,7 @@ namespace UI.MainMenu
 
         private void Awake()
         {
-            AppState.EnsureExists();
+            GameManager.EnsureExists();
             ShowRoot();
         }
 

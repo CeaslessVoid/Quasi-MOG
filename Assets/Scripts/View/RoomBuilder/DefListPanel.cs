@@ -1,9 +1,26 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace RoomGen.UI
 {
+    public readonly struct PlaceableItem
+    {
+        public readonly string DefName;
+        public readonly string DisplayName;
+        public readonly Sprite Icon;
+        public readonly Action OnSelect;
+
+        public PlaceableItem(string defName, string displayName, Sprite icon, Action onSelect)
+        {
+            DefName = defName;
+            DisplayName = displayName;
+            Icon = icon;
+            OnSelect = onSelect;
+        }
+    }
+
     public class DefListPanel : MonoBehaviour
     {
         [SerializeField] private Transform content;
@@ -11,12 +28,12 @@ namespace RoomGen.UI
 
         private readonly List<DefListItemView> _pool = new List<DefListItemView>();
 
-        public void Populate(IReadOnlyList<PlaceableItem> items, System.Func<string, bool> isSelected = null)
+        public void Populate(IReadOnlyList<PlaceableItem> items, Func<string, bool> isSelected = null)
         {
             if (itemPrefab == null) return;
             if (content == null) return;
 
-            EnsurePoolSize(items.Count);
+            bool grew = EnsurePoolSize(items.Count);
 
             for (int i = 0; i < items.Count; i++)
             {
@@ -29,14 +46,16 @@ namespace RoomGen.UI
             for (int i = items.Count; i < _pool.Count; i++)
                 _pool[i].gameObject.SetActive(false);
 
-            if (content is RectTransform contentRect)
+            if (grew && content is RectTransform contentRect)
+            {
+                Canvas.ForceUpdateCanvases();
                 LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
-
-            Canvas.ForceUpdateCanvases();
+            }
         }
 
-        private void EnsurePoolSize(int count)
+        private bool EnsurePoolSize(int count)
         {
+            bool grew = false;
             int guard = 0;
             while (_pool.Count < count)
             {
@@ -51,7 +70,9 @@ namespace RoomGen.UI
                     rt.localRotation = Quaternion.identity;
                 }
                 _pool.Add(instance);
+                grew = true;
             }
+            return grew;
         }
     }
 }

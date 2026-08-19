@@ -4,6 +4,34 @@ using UnityEngine;
 
 namespace Entities
 {
+    public static class EntityConstants
+    {
+        public const float CellSize = 1f;
+    }
+
+    public interface ITurnActor
+    {
+        bool CanAct { get; }
+        void TakeTurn();
+    }
+
+    public class Inventory
+    {
+        public readonly List<string> itemDefNames = new List<string>();
+    }
+
+    public class LimbInstance
+    {
+        public LimbDef def;
+        public LimbInstance child;
+        public bool attached = true;
+
+        public LimbInstance(LimbDef def)
+        {
+            this.def = def;
+        }
+    }
+
     [RequireComponent(typeof(EntityVisuals))]
     public class LivingEntity : MonoBehaviour, ITurnActor
     {

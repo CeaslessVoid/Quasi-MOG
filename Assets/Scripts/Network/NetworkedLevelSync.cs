@@ -4,7 +4,6 @@ using Unity.Netcode;
 using UnityEngine;
 using RoomGen;
 using Entities;
-using Networking.App;
 
 namespace Networking
 {
@@ -162,7 +161,7 @@ namespace Networking
                 }
             }
 
-            return clientId == NetworkManager.LocalClientId ? AppState.EnsureExists().LocalPlayerName : "Player";
+            return clientId == NetworkManager.LocalClientId ? GameManager.EnsureExists().LocalPlayerName : "Player";
         }
     }
 }

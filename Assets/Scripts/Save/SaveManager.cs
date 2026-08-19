@@ -4,6 +4,14 @@ using UnityEngine;
 
 namespace Save
 {
+    [Serializable]
+    public struct SaveSlotInfo
+    {
+        public int slotIndex;
+        public bool hasSave;
+        public string saveName;
+        public string lastPlayedUtc;
+    }
     public static class SaveManager
     {
         public const int SlotCount = 3;
