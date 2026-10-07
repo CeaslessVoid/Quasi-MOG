@@ -10628,7 +10628,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 286c0b46d5d7fbf42a84060fb95afa56, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  Defs: {fileID: 11400000, guid: df94fe09cc04e2546ab62c8f77764909, type: 2}
 --- !u!4 &1430554081
 Transform:
   m_ObjectHideFlags: 0
@@ -12147,7 +12146,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RoomGen.UI.SimpleButtonListView
   content: {fileID: 1058973847}
-  itemPrefab: {fileID: 4473699470274265065, guid: 4fcc3ab24fc35f344b16336a6cae9637, type: 3}
+  itemPrefab: {fileID: 2848581964209713722, guid: 9d736b61dfc165345a69b724d9fa70dc, type: 3}
 --- !u!1 &1673462909
 GameObject:
   m_ObjectHideFlags: 0

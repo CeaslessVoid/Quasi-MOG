@@ -22,11 +22,8 @@ namespace RoomGen.UI
         private void RefreshFields()
         {
             if (!Controller) return;
-            Debug.Log(1);
             desiredConnectionsInput.SetTextWithoutNotify(Controller.CurrentDesiredConnections.ToString());
-            Debug.Log(2);
             chanceToConnectWhenBelowTargetInput.SetTextWithoutNotify(Controller.CurrentChanceToConnectWhenBelowTarget.ToString(CultureInfo.InvariantCulture));
-            Debug.Log(3);
             selectionWeightInput.SetTextWithoutNotify(Controller.CurrentSelectionWeight.ToString(CultureInfo.InvariantCulture));
         }
 

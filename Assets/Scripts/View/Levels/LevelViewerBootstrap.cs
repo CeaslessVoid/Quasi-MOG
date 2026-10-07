@@ -15,7 +15,7 @@ namespace RoomGen
 
         private void Start()
         {
-            var appState = GameManager.EnsureExists();
+            GameManager.EnsureExists();
 
             if (GameManager.Instance.IsMultiplayer && NetworkManager.Singleton != null)
                 StartMultiplayer();
