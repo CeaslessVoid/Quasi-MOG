@@ -1,4 +1,4 @@
-using System.Linq;
+using System.Collections.Generic;
 using UnityEngine;
 using GameDefs;
 
@@ -13,13 +13,32 @@ namespace RoomGen.UI
 
         private void RefreshLists()
         {
-            var doors = DefDatabase.All<DoorDef>();
+            if (!Controller) return;
 
-            singleDoorListView.Populate(doors.Select(d =>
-                new SimpleButtonItem(d.DisplayName, () => { Controller.SetPreferredSingleDoorDef(d.DefName); RefreshLists(); })).ToList());
+            var room = Controller.CurrentRoom;
+            string selectedSingle = room?.preferredSingleDoorDef;
+            string selectedDouble = room?.preferredDoubleDoorDef;
 
-            doubleDoorListView.Populate(doors.Select(d =>
-                new SimpleButtonItem(d.DisplayName, () => { Controller.SetPreferredDoubleDoorDef(d.DefName); RefreshLists(); })).ToList());
+            var singles = new List<SimpleButtonItem>
+            {
+                new SimpleButtonItem("Default", () => { Controller.ClearPreferredSingleDoorDef(); RefreshLists(); }, string.IsNullOrEmpty(selectedSingle))
+            };
+            var doubles = new List<SimpleButtonItem>
+            {
+                new SimpleButtonItem("Default", () => { Controller.ClearPreferredDoubleDoorDef(); RefreshLists(); }, string.IsNullOrEmpty(selectedDouble))
+            };
+
+            foreach (var door in DefDatabase.All<DoorDef>())
+            {
+                var def = door;
+                if (def.IsDoubleDoor)
+                    doubles.Add(new SimpleButtonItem(def.DisplayName, () => { Controller.SetPreferredDoubleDoorDef(def.DefName); RefreshLists(); }, def.DefName == selectedDouble));
+                else
+                    singles.Add(new SimpleButtonItem(def.DisplayName, () => { Controller.SetPreferredSingleDoorDef(def.DefName); RefreshLists(); }, def.DefName == selectedSingle));
+            }
+
+            singleDoorListView.Populate(singles);
+            doubleDoorListView.Populate(doubles);
         }
     }
 }

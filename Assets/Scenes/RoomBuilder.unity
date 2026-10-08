@@ -3593,6 +3593,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RoomGen.UI.SimpleButtonListView
   content: {fileID: 598125859}
   itemPrefab: {fileID: 2848581964209713722, guid: 810dc0752b650d444ac2baed3e49ba08, type: 3}
+  selectedColor: {r: 0.25, g: 0.65, b: 1, a: 1}
+  normalColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!114 &575467415
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12147,6 +12149,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RoomGen.UI.SimpleButtonListView
   content: {fileID: 1058973847}
   itemPrefab: {fileID: 2848581964209713722, guid: 9d736b61dfc165345a69b724d9fa70dc, type: 3}
+  selectedColor: {r: 0.25, g: 0.65, b: 1, a: 1}
+  normalColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!1 &1673462909
 GameObject:
   m_ObjectHideFlags: 0
@@ -13178,6 +13182,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RoomGen.UI.SimpleButtonListView
   content: {fileID: 1401039849}
   itemPrefab: {fileID: 2848581964209713722, guid: 810dc0752b650d444ac2baed3e49ba08, type: 3}
+  selectedColor: {r: 0.25, g: 0.65, b: 1, a: 1}
+  normalColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!1 &1802543261
 GameObject:
   m_ObjectHideFlags: 0
@@ -13776,6 +13782,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RoomGen.UI.SimpleButtonListView
   content: {fileID: 139109080}
   itemPrefab: {fileID: 2848581964209713722, guid: 810dc0752b650d444ac2baed3e49ba08, type: 3}
+  selectedColor: {r: 0.25, g: 0.65, b: 1, a: 1}
+  normalColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!114 &2041546271
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14036,6 +14044,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RoomGen.UI.SimpleButtonListView
   content: {fileID: 742209426}
   itemPrefab: {fileID: 2848581964209713722, guid: 810dc0752b650d444ac2baed3e49ba08, type: 3}
+  selectedColor: {r: 0.25, g: 0.65, b: 1, a: 1}
+  normalColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!114 &2068462451
 MonoBehaviour:
   m_ObjectHideFlags: 0

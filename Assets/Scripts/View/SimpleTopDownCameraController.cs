@@ -15,6 +15,29 @@ namespace RoomGen
 
         [SerializeField] private float reservedPanelWidth = 0f;
 
+        public static SimpleTopDownCameraController Spawn(float orthographicSize, float reservedPanelWidth = 0f)
+        {
+            var cam = Camera.main;
+            if (cam == null)
+            {
+                var camGO = new GameObject("Level Camera");
+                cam = camGO.AddComponent<Camera>();
+                camGO.tag = "MainCamera";
+                camGO.AddComponent<AudioListener>();
+            }
+
+            cam.orthographic = true;
+            cam.orthographicSize = orthographicSize;
+            cam.transform.position = new Vector3(orthographicSize, orthographicSize, -10f);
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0.03f, 0.03f, 0.03f);
+
+            var controller = cam.GetComponent<SimpleTopDownCameraController>();
+            if (controller == null) controller = cam.gameObject.AddComponent<SimpleTopDownCameraController>();
+            controller.Configure(cam, reservedPanelWidth);
+            return controller;
+        }
+
         public void Configure(Camera cam, float reservedPanelWidthOverride = -1f)
         {
             targetCamera = cam;
