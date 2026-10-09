@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace UI.MainMenu
 {
@@ -8,6 +9,9 @@ namespace UI.MainMenu
         [SerializeField] private GameObject tutorialPanel;
         [SerializeField] private GameObject playPanel;
         [SerializeField] private GameObject multiplayerPanel;
+
+        [SerializeField] private string mapEditorSceneName = "RoomBuilder";
+        [SerializeField] private string mapShowcaseSceneName = "GeneratorShowcase";
 
         private void Awake()
         {
@@ -38,6 +42,10 @@ namespace UI.MainMenu
             SetAll(false);
             multiplayerPanel.SetActive(true);
         }
+
+        public void OpenMapEditor() => SceneManager.LoadScene(mapEditorSceneName);
+
+        public void OpenMapShowcase() => SceneManager.LoadScene(mapShowcaseSceneName);
 
         public void ExitGame()
         {

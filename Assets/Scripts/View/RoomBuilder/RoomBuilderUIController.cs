@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
 using GameDefs;
@@ -13,6 +14,7 @@ namespace RoomGen.UI
         [Header("Target")]
         [SerializeField] private RoomBuilderController controller;
         [SerializeField] private RoomBuilderTopBarController topBar;
+        [SerializeField] private string menuSceneName = "MainMenu";
 
         [Header("Bottom Tabs")]
         [SerializeField] private Button floorTabButton;
@@ -101,6 +103,8 @@ namespace RoomGen.UI
 
             UpdateDragVisibility();
         }
+
+        public void ExitToMainMenu() => SceneManager.LoadScene(menuSceneName);
 
         private void SelectTool(BuilderTool tool)
         {
